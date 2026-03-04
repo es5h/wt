@@ -81,11 +81,10 @@ func newGotoCmd() *cobra.Command {
 				fmt.Fprintln(cmd.OutOrStdout(), path)
 				return nil
 			}
-			if len(matches) > 1 {
-				return &exitError{Code: 1, Err: fmt.Errorf("%s", formatAmbiguousGoto(query, matches))}
+			chosen, err := resolveMatchedWorktree("wt goto", wts, query)
+			if err != nil {
+				return err
 			}
-
-			chosen := matches[0]
 			if jsonOut {
 				type out struct {
 					Path   string `json:"path"`
@@ -173,16 +172,6 @@ func completeGotoQuery(cmd *cobra.Command, args []string, toComplete string) ([]
 	}
 	sort.Strings(out)
 	return out, cobra.ShellCompDirectiveNoFileComp
-}
-
-func formatAmbiguousGoto(query string, matches []worktree.Worktree) string {
-	var b strings.Builder
-	fmt.Fprintf(&b, "wt goto: %d matches for %q\n", len(matches), query)
-	for _, wt := range matches {
-		fmt.Fprintf(&b, "  - %s (%s)\n", wt.Path, displayBranch(wt))
-	}
-	b.WriteString("hint: use a more specific query (TUI selection is not implemented yet)")
-	return b.String()
 }
 
 func matchWorktrees(wts []worktree.Worktree, query string) []worktree.Worktree {

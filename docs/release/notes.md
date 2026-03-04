@@ -3,6 +3,7 @@
 이 문서는 사용자에게 보이는 변경사항을 기록합니다. (README에는 패치 노트를 쓰지 않음)
 
 ## Unreleased
+- 2026-03-05: `wt run <query> -- <cmd...>` 추가(`wt goto`와 같은 매칭 규칙 사용, 종료 코드 보존, `--json` 지원)
 - 2026-03-04: `wt list` 구현(`--json`, `--porcelain`, `--verify`, `--base` 지원)
 - 2026-03-04: `wt goto` 구현(`--json` 지원; `--tui`는 미구현)
 - 2026-03-04: `wt goto <query>`에서 “현재 worktree 브랜치”를 동적으로 자동완성 후보로 제공(셸 completion 설치 시)
