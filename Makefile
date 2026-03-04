@@ -78,5 +78,5 @@ premerge: check test ## Pre-merge gate (version/release notes + tests)
 .PHONY: pr-create
 pr-create: premerge ## Create GitHub PR via gh (requires gh auth login)
 	@[ -x "$(GH_BIN)" ] || { echo "gh not found. Install: 'go install github.com/cli/cli/v2/cmd/gh@latest'"; exit 1; }
-	@$(GH_BIN) auth status >/dev/null 2>&1 || { echo "gh not authenticated. Run: 'gh auth login'"; exit 1; }
+	@$(GH_BIN) auth status >/dev/null 2>&1 || { echo "gh not authenticated. Run: '$(GH_BIN) auth login'"; exit 1; }
 	@$(GH_BIN) pr create --fill
