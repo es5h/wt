@@ -5,6 +5,7 @@
 ## Unreleased
 - 2026-03-05: `wt run <query> -- <cmd...>` 추가(`wt goto`와 같은 매칭 규칙 사용, 종료 코드 보존, `--json` 지원)
 - 2026-03-05: `wt create`와 `wt goto --create`가 동일한 worktree root 오버라이드 정책을 공유하도록 리팩터링 (`--root` > `WT_ROOT` > repo-local git config `wt.root` > `<repo>/.wt`)
+- 2026-03-05: `wt list --json --verify` 출력 스키마를 고정해 `pathExists`, `dotGitExists`, `valid`, `mergedIntoBase`, `baseRef`를 항상 포함하도록 조정하고, detached/branch 없음 케이스의 `mergedIntoBase`를 `null`로 명시
 - 2026-03-04: `wt list` 구현(`--json`, `--porcelain`, `--verify`, `--base` 지원)
 - 2026-03-04: `wt goto` 구현(`--json` 지원; `--tui`는 미구현)
 - 2026-03-04: `wt goto <query>`에서 “현재 worktree 브랜치”를 동적으로 자동완성 후보로 제공(셸 completion 설치 시)

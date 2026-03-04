@@ -20,6 +20,14 @@
 - `--verify`: worktree entry 검증(경로/.git 존재 + base ref 기준 merged 여부)
   - `--base <ref>`: `--verify`의 base ref 지정(기본: `origin/HEAD` 또는 `main`)
 
+`--json --verify` 출력 규칙:
+- 각 항목은 항상 `pathExists`, `dotGitExists`, `valid`, `mergedIntoBase`, `baseRef` 필드를 포함한다.
+- `mergedIntoBase`는 boolean 또는 `null`이다.
+- `mergedIntoBase: null`은 merged 여부를 계산할 브랜치 ref가 없는 경우에 사용한다.
+  - 예: detached worktree
+  - 예: branch 정보가 없는 entry
+- `baseRef`는 `--verify`가 켜진 JSON 출력에서 항상 문자열로 포함된다.
+
 ## `wt goto [query]`
 목표: query로 worktree를 선택하고 “경로”를 stdout으로 출력한다.
 

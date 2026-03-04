@@ -15,6 +15,16 @@ import (
 	"wt/internal/runner"
 )
 
+func decodeJSONObjects(t *testing.T, data []byte) []map[string]any {
+	t.Helper()
+
+	var got []map[string]any
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("stdout is not valid json: %v\nstdout=%q", err, string(data))
+	}
+	return got
+}
+
 func newListCmdWithDeps(t *testing.T, d *deps) (*cobra.Command, *bytes.Buffer, *bytes.Buffer) {
 	t.Helper()
 
@@ -309,20 +319,100 @@ branch refs/heads/feature-x
 		t.Fatalf("stderr = %q, want empty", stderr.String())
 	}
 
-	var got []jsonWorktree
-	if err := json.Unmarshal(stdout.Bytes(), &got); err != nil {
-		t.Fatalf("stdout is not valid json: %v\nstdout=%q", err, stdout.String())
-	}
+	got := decodeJSONObjects(t, stdout.Bytes())
 	if len(got) != 1 {
 		t.Fatalf("len(json) = %d, want 1", len(got))
 	}
-	if got[0].PathExists == nil || got[0].DotGitExists == nil || got[0].Valid == nil || got[0].MergedIntoBase == nil {
-		t.Fatalf("expected verify fields to be present: %#v", got[0])
+	for _, key := range []string{"pathExists", "dotGitExists", "valid", "mergedIntoBase", "baseRef"} {
+		if _, ok := got[0][key]; !ok {
+			t.Fatalf("expected verify field %q to be present: %#v", key, got[0])
+		}
 	}
-	if got[0].BaseRef != "main" {
-		t.Fatalf("baseRef = %q, want main", got[0].BaseRef)
+	if got[0]["baseRef"] != "main" {
+		t.Fatalf("baseRef = %#v, want main", got[0]["baseRef"])
 	}
-	if *got[0].MergedIntoBase != true {
-		t.Fatalf("mergedIntoBase = %v, want true", *got[0].MergedIntoBase)
+	if got[0]["mergedIntoBase"] != true {
+		t.Fatalf("mergedIntoBase = %#v, want true", got[0]["mergedIntoBase"])
+	}
+}
+
+func TestList_Verify_JSONDetachedUsesNullMergedIntoBase(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+
+	wtPath := filepath.Join(t.TempDir(), "detached")
+	if err := os.MkdirAll(filepath.Join(wtPath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create .git dir: %v", err)
+	}
+
+	porcelain := strings.TrimSpace(`
+worktree `+wtPath+`
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+detached
+`) + "\n"
+
+	cmd, stdout, stderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res: runner.Result{
+						Stdout:   []byte(repo + "\n"),
+						ExitCode: 0,
+					},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res: runner.Result{
+						Stdout:   []byte(porcelain),
+						ExitCode: 0,
+					},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "main^{commit}"},
+					res: runner.Result{
+						ExitCode: 0,
+					},
+				},
+			},
+		},
+		Cwd: cwd,
+	})
+
+	cmd.SetArgs([]string{"--json", "--verify", "--base", "main"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+
+	got := decodeJSONObjects(t, stdout.Bytes())
+	if len(got) != 1 {
+		t.Fatalf("len(json) = %d, want 1", len(got))
+	}
+	for _, key := range []string{"pathExists", "dotGitExists", "valid", "mergedIntoBase", "baseRef"} {
+		if _, ok := got[0][key]; !ok {
+			t.Fatalf("expected verify field %q to be present: %#v", key, got[0])
+		}
+	}
+	if got[0]["mergedIntoBase"] != nil {
+		t.Fatalf("mergedIntoBase = %#v, want null", got[0]["mergedIntoBase"])
+	}
+	if got[0]["baseRef"] != "main" {
+		t.Fatalf("baseRef = %#v, want main", got[0]["baseRef"])
+	}
+	if got[0]["detached"] != true {
+		t.Fatalf("detached = %#v, want true", got[0]["detached"])
 	}
 }
