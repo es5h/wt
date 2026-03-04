@@ -45,7 +45,12 @@ func newCreateCmd() *cobra.Command {
 				return err
 			}
 
-			path, err := createWorktree(ctx, d, repoRoot, branch, opts)
+			primaryRoot, err := git.PrimaryWorktreeRoot(ctx, d.Runner, repoRoot)
+			if err != nil {
+				return err
+			}
+
+			path, err := createWorktree(ctx, d, repoRoot, primaryRoot, branch, opts)
 			if err != nil {
 				return err
 			}
@@ -62,15 +67,15 @@ func newCreateCmd() *cobra.Command {
 	return cmd
 }
 
-func createWorktree(ctx context.Context, d *deps, repoRoot string, branch string, opts createOpts) (string, error) {
+func createWorktree(ctx context.Context, d *deps, repoRoot string, primaryRoot string, branch string, opts createOpts) (string, error) {
 	wts, err := git.WorktreeList(ctx, d.Runner, repoRoot)
 	if err != nil {
 		return "", err
 	}
-	return createWorktreeFromList(ctx, d, repoRoot, branch, opts, wts)
+	return createWorktreeFromList(ctx, d, repoRoot, primaryRoot, branch, opts, wts)
 }
 
-func createWorktreeFromList(ctx context.Context, d *deps, repoRoot string, branch string, opts createOpts, wts []worktree.Worktree) (string, error) {
+func createWorktreeFromList(ctx context.Context, d *deps, repoRoot string, primaryRoot string, branch string, opts createOpts, wts []worktree.Worktree) (string, error) {
 	branch = strings.TrimSpace(branch)
 	if branch == "" {
 		return "", usageError(fmt.Errorf("wt create: branch cannot be empty"))
@@ -83,7 +88,13 @@ func createWorktreeFromList(ctx context.Context, d *deps, repoRoot string, branc
 
 	targetPath := strings.TrimSpace(opts.Path)
 	if targetPath == "" {
-		targetPath = filepath.Join(repoRoot, ".wt", branchPathPart)
+		if strings.TrimSpace(primaryRoot) == "" {
+			return "", fmt.Errorf("missing primary root (internal error)")
+		}
+		targetPath = filepath.Join(primaryRoot, ".wt", branchPathPart)
+		if repoRoot != primaryRoot {
+			fmt.Fprintf(os.Stderr, "note: default worktree root is %s (derived from git common dir)\n", primaryRoot)
+		}
 	}
 	for _, wt := range wts {
 		if wt.Branch == "refs/heads/"+branch && wt.Path != "" {

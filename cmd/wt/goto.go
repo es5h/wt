@@ -53,6 +53,11 @@ func newGotoCmd() *cobra.Command {
 				return err
 			}
 
+			primaryRoot, err := git.PrimaryWorktreeRoot(ctx, d.Runner, repoRoot)
+			if err != nil {
+				return err
+			}
+
 			wts, err := git.WorktreeList(ctx, d.Runner, repoRoot)
 			if err != nil {
 				return err
@@ -71,7 +76,7 @@ func newGotoCmd() *cobra.Command {
 					}
 				}
 
-				path, err := createWorktreeFromList(ctx, d, repoRoot, branch, createOpts{
+				path, err := createWorktreeFromList(ctx, d, repoRoot, primaryRoot, branch, createOpts{
 					Path: createPath,
 					From: createFrom,
 				}, wts)

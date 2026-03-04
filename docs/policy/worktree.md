@@ -7,8 +7,15 @@
 
 ## Default worktree root
 현재 기본 정책:
-- 기본 생성 경로는 `<repo>/.wt/<branch>` 이다.
+- 기본 생성 경로는 `<primary-root>/.wt/<branch>` 이다.
 - `.wt/`는 레포의 산출물/로컬 작업 디렉토리이므로 git에서 추적하지 않는다(`/.wt/`를 `.gitignore`에 추가).
+
+`<primary-root>` 결정 규칙:
+- `git rev-parse --path-format=absolute --git-common-dir`로 “공유 git 디렉토리”를 구한다.
+- 그 부모 디렉토리를 `<primary-root>`로 사용한다.
+
+의도:
+- linked worktree 내부에서 `wt create`/`wt goto --create`를 실행해도, 기본 경로가 “현재 worktree 아래”로 잡혀 중첩되는 문제(예: `.wt/a/.wt/b/...`)를 방지한다.
 
 추후(초안):
 - 기본 레이아웃을 바꾸고 싶으면(예: `~/.wt/<project>/<branch>`), 명시적 오버라이드(플래그/환경변수/git config)를 통해 선택할 수 있게 한다.
