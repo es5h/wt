@@ -61,13 +61,30 @@ wt completion fish > ~/.config/fish/completions/wt.fish
 목표: `cd "$(wt goto ...)"`를 래핑하는 함수를 제공한다.
 
 권장 UX(초안):
-- 사용자는 rc 파일에 아래 중 하나를 넣는다.
+- 사용자는 아래 중 하나로 rc 파일에 추가한다.
 
 예시(컨셉, 스펙 확정 전):
 - zsh/bash:
   - `wtg() { cd "$(wt goto "$@")" || return; }`
 - fish:
   - `function wtg; cd (wt goto $argv); or return; end`
+
+### 사용(추천)
+```sh
+wt init zsh
+```
+
+또는(즉시 적용, opt-in):
+```sh
+eval "$(wt init zsh)"
+```
+
+#### `wtg` 자동완성(zsh)
+`wt`의 zsh completion(`_wt`)을 설치했다면, `wt init zsh` 출력에는 `wtg <TAB>`가 `wt goto <TAB>`처럼 동작하도록 “completion bridge”도 포함됩니다.
+
+만약 `wtg` 탭이 파일명 완성으로만 동작하면:
+- `_wt` 설치/로딩 여부를 확인: `whence -v _wt`
+- completion 설치: 위 “zsh 설치(옵트인)” 섹션 참고
 
 추가(초안):
 - completion 설치 UX를 `wt init`에 포함할지 여부는 추후 결정(로드맵: `docs/roadmap/README.md`)
