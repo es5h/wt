@@ -12,11 +12,13 @@
 목표: 현재 repo의 worktree를 나열한다.
 
 출력(기본):
-- 각 worktree의 `path`, 연결된 `branch`(있으면), `HEAD`(커밋 해시/짧은 해시), `locked` 여부를 표시
+- 각 worktree의 `path`, 연결된 `branch`(있으면), `HEAD`(짧은 해시), `locked` 여부를 표시
 
 옵션(초안):
 - `--json`: 구조화 출력
 - `--porcelain`: git처럼 안정적 포맷(필드 고정, 파싱 용도)
+- `--verify`: worktree entry 검증(경로/.git 존재 + base ref 기준 merged 여부)
+  - `--base <ref>`: `--verify`의 base ref 지정(기본: `origin/HEAD` 또는 `main`)
 
 ## `wt goto [query]`
 목표: query로 worktree를 선택하고 “경로”를 stdout으로 출력한다.
