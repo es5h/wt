@@ -111,17 +111,3 @@ func (e *exitError) Error() string {
 func usageError(err error) error {
 	return &exitError{Code: 2, Err: err}
 }
-
-func newGotoCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:           "goto <query>",
-		Short:         "Print selected worktree path",
-		Args:          cobra.ExactArgs(1),
-		SilenceUsage:  true,
-		SilenceErrors: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			_ = args[0]
-			return fmt.Errorf("wt goto: not implemented yet")
-		},
-	}
-}
