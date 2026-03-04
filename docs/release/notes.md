@@ -4,6 +4,7 @@
 
 ## Unreleased
 - 2026-03-05: `wt cleanup` 추가(`wt list`의 `recommendedAction`을 preview/apply로 연결, 기본 preview-only, `--apply`일 때만 prune/remove 실행, text/JSON 모두 remove 근거에서 로컬 git merged와 hosting merged를 계속 분리)
+- 2026-03-05: fix: linked worktree 안에서 `wt root`가 현재 linked worktree path 대신 primary repo root를 출력하도록 수정
 - 2026-03-05: `wt remove` 추가(기본 `--dry-run` preview-only, `--force`는 즉시 삭제, interactive TTY에서는 확인 프롬프트 지원; current/primary worktree 제거 금지, `prunable` entry는 `wt prune`로 분리)
 - 2026-03-05: `wt root` 추가(기본 stdout path-only, `--json` 시 `{root}` 출력)
 - 2026-03-05: `wt init <shell>` 출력에 `wtr`와 `wcd`를 추가하고, zsh completion bridge가 `wtg`뿐 아니라 `wcd`도 `wt path`처럼 완성하도록 조정
