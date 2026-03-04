@@ -134,6 +134,7 @@ type jsonVerifyFields struct {
 	MergedIntoBase   *bool
 	BaseRef          string
 	HostingProvider  string
+	HostingKind      string
 	MergedViaHosting *bool
 	HostingReason    string
 }
@@ -153,6 +154,7 @@ type verifyInfo struct {
 	MergedIntoBase   *bool
 	BaseRef          string
 	HostingProvider  string
+	HostingKind      string
 	MergedViaHosting *bool
 	HostingReason    string
 }
@@ -176,6 +178,7 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 		MergedIntoBase   *bool  `json:"mergedIntoBase,omitempty"`
 		BaseRef          string `json:"baseRef,omitempty"`
 		HostingProvider  string `json:"hostingProvider,omitempty"`
+		HostingKind      string `json:"hostingKind,omitempty"`
 		MergedViaHosting *bool  `json:"mergedViaHosting,omitempty"`
 		HostingReason    string `json:"hostingReason,omitempty"`
 	}
@@ -197,6 +200,7 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 		out.MergedIntoBase = jwt.Verify.MergedIntoBase
 		out.BaseRef = jwt.Verify.BaseRef
 		out.HostingProvider = jwt.Verify.HostingProvider
+		out.HostingKind = jwt.Verify.HostingKind
 		out.MergedViaHosting = jwt.Verify.MergedViaHosting
 		out.HostingReason = jwt.Verify.HostingReason
 	}
@@ -223,6 +227,7 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 		outMap["baseRef"] = jwt.Verify.BaseRef
 		if jwt.Verify.HostingProvider != "" {
 			outMap["hostingProvider"] = jwt.Verify.HostingProvider
+			outMap["hostingKind"] = jwt.Verify.HostingKind
 			outMap["mergedViaHosting"] = jwt.Verify.MergedViaHosting
 			if jwt.Verify.HostingReason != "" {
 				outMap["hostingReason"] = jwt.Verify.HostingReason
@@ -257,6 +262,7 @@ func toJSONWorktrees(cmd *cobra.Command, d *deps, wts []worktree.Worktree, verif
 					MergedIntoBase:   info.MergedIntoBase,
 					BaseRef:          info.BaseRef,
 					HostingProvider:  info.HostingProvider,
+					HostingKind:      info.HostingKind,
 					MergedViaHosting: info.MergedViaHosting,
 					HostingReason:    info.HostingReason,
 				}
@@ -299,9 +305,15 @@ func verifyWorktreeWithContext(ctx context.Context, d *deps, verifyCtx *listVeri
 
 	var hostingMerged *bool
 	hostingProvider := ""
+	hostingKind := ""
 	hostingReason := ""
 	if verifyCtx.VerifyHosting {
 		hostingProvider = string(verifyCtx.HostingProvider)
+		if verifyCtx.HostingProvider == hosting.ProviderGitHub {
+			hostingKind = "pr"
+		} else if verifyCtx.HostingProvider == hosting.ProviderGitLab {
+			hostingKind = "mr"
+		}
 		if wt.Branch == "" || wt.Detached {
 			hostingReason = "no-branch"
 		} else {
@@ -310,6 +322,7 @@ func verifyWorktreeWithContext(ctx context.Context, d *deps, verifyCtx *listVeri
 				return nil, err
 			}
 			hostingProvider = string(result.Provider)
+			hostingKind = result.Kind
 			hostingMerged = result.Merged
 			hostingReason = result.Reason
 		}
@@ -322,6 +335,7 @@ func verifyWorktreeWithContext(ctx context.Context, d *deps, verifyCtx *listVeri
 		MergedIntoBase:   merged,
 		BaseRef:          verifyCtx.BaseRef,
 		HostingProvider:  hostingProvider,
+		HostingKind:      hostingKind,
 		MergedViaHosting: hostingMerged,
 		HostingReason:    hostingReason,
 	}, nil
@@ -355,7 +369,7 @@ func formatWorktreeLine(wt worktree.Worktree, info *verifyInfo) string {
 			flags = append(flags, "merged")
 		}
 		if info.MergedViaHosting != nil && *info.MergedViaHosting {
-			flags = append(flags, "merged-pr")
+			flags = append(flags, fmt.Sprintf("merged-hosting:%s", info.HostingProvider))
 		}
 	}
 

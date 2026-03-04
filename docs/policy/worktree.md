@@ -66,3 +66,4 @@ repo-local git config 예시:
 
 의도:
 - squash merge 환경에서 로컬 git `[merged]`와 GitHub PR merged 여부가 다를 수 있으므로, 의미를 분리해 사용자에게 명확히 보여준다.
+- 텍스트 출력 마커는 provider 일반형(`[merged-hosting:<provider>]`)을 사용하고, 상세 의미는 JSON(`hostingProvider`, `hostingKind`)에 둔다.

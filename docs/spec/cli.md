@@ -28,10 +28,10 @@
 현재 구현 상태:
 - 로컬 git 기준 `[merged]`는 `git merge-base --is-ancestor <branch> <base>` 의미를 유지한다.
 - 호스팅 기준 merged는 별도 필드/마커로 분리한다:
-  - 텍스트: `[merged-pr]`
-  - JSON: `hostingProvider`, `mergedViaHosting`, `hostingReason`
+  - 텍스트: `[merged-hosting:<provider>]`
+  - JSON: `hostingProvider`, `hostingKind`, `mergedViaHosting`, `hostingReason`
 - provider 감지는 `origin` remote URL 기준 자동 감지다.
-- GitLab remote는 현재 `hostingProvider=gitlab`, `mergedViaHosting=null`, `hostingReason=unsupported-provider`로 반환한다.
+- GitLab remote는 현재 `hostingProvider=gitlab`, `hostingKind=mr`, `mergedViaHosting=null`, `hostingReason=unsupported-provider`로 반환한다.
 
 `--json --verify` 출력 규칙:
 - 각 항목은 항상 `pathExists`, `dotGitExists`, `valid`, `mergedIntoBase`, `baseRef` 필드를 포함한다.

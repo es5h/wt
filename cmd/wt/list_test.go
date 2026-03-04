@@ -456,8 +456,8 @@ branch refs/heads/feature-x
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "[merged-pr]") {
-		t.Fatalf("stdout = %q, want merged-pr marker", stdout.String())
+	if !strings.Contains(stdout.String(), "[merged-hosting:github]") {
+		t.Fatalf("stdout = %q, want merged-hosting:github marker", stdout.String())
 	}
 }
 
@@ -539,6 +539,9 @@ branch refs/heads/feature-x
 	}
 	if got[0]["hostingProvider"] != "github" {
 		t.Fatalf("hostingProvider = %#v, want github", got[0]["hostingProvider"])
+	}
+	if got[0]["hostingKind"] != "pr" {
+		t.Fatalf("hostingKind = %#v, want pr", got[0]["hostingKind"])
 	}
 	if got[0]["mergedViaHosting"] != nil {
 		t.Fatalf("mergedViaHosting = %#v, want nil", got[0]["mergedViaHosting"])
@@ -693,6 +696,9 @@ branch refs/heads/feature-x
 	got := decodeJSONObjects(t, stdout.Bytes())
 	if got[0]["hostingProvider"] != "gitlab" {
 		t.Fatalf("hostingProvider = %#v, want gitlab", got[0]["hostingProvider"])
+	}
+	if got[0]["hostingKind"] != "mr" {
+		t.Fatalf("hostingKind = %#v, want mr", got[0]["hostingKind"])
 	}
 	if got[0]["mergedViaHosting"] != nil {
 		t.Fatalf("mergedViaHosting = %#v, want nil", got[0]["mergedViaHosting"])

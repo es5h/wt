@@ -20,6 +20,7 @@ const (
 
 type VerifyResult struct {
 	Provider Provider
+	Kind     string
 	Merged   *bool
 	Reason   string
 }
@@ -41,24 +42,24 @@ func VerifyMerged(ctx context.Context, r runner.Runner, repoRoot string, provide
 	case ProviderGitHub:
 		return verifyGitHubMerged(ctx, r, repoRoot, branch, baseRef)
 	case ProviderGitLab:
-		return VerifyResult{Provider: ProviderGitLab, Reason: "unsupported-provider"}, nil
+		return VerifyResult{Provider: ProviderGitLab, Kind: "mr", Reason: "unsupported-provider"}, nil
 	default:
-		return VerifyResult{Provider: provider, Reason: "unsupported-provider"}, nil
+		return VerifyResult{Provider: provider, Kind: "unknown", Reason: "unsupported-provider"}, nil
 	}
 }
 
 func verifyGitHubMerged(ctx context.Context, r runner.Runner, repoRoot string, branch string, baseRef string) (VerifyResult, error) {
 	if strings.TrimSpace(branch) == "" {
-		return VerifyResult{Provider: ProviderGitHub, Reason: "no-branch"}, nil
+		return VerifyResult{Provider: ProviderGitHub, Kind: "pr", Reason: "no-branch"}, nil
 	}
 
 	ghBin, ok := findGitHubCLI()
 	if !ok {
-		return VerifyResult{Provider: ProviderGitHub, Reason: "gh-auth-unavailable"}, nil
+		return VerifyResult{Provider: ProviderGitHub, Kind: "pr", Reason: "gh-auth-unavailable"}, nil
 	}
 
 	if _, err := r.Run(ctx, repoRoot, ghBin, "auth", "status"); err != nil {
-		return VerifyResult{Provider: ProviderGitHub, Reason: "gh-auth-unavailable"}, nil
+		return VerifyResult{Provider: ProviderGitHub, Kind: "pr", Reason: "gh-auth-unavailable"}, nil
 	}
 
 	args := []string{"pr", "list", "--state", "merged", "--head", branch, "--json", "number", "--limit", "1"}
@@ -68,18 +69,18 @@ func verifyGitHubMerged(ctx context.Context, r runner.Runner, repoRoot string, b
 
 	res, err := r.Run(ctx, repoRoot, ghBin, args...)
 	if err != nil {
-		return VerifyResult{Provider: ProviderGitHub, Reason: "gh-pr-query-failed"}, nil
+		return VerifyResult{Provider: ProviderGitHub, Kind: "pr", Reason: "gh-pr-query-failed"}, nil
 	}
 
 	var prs []struct {
 		Number int `json:"number"`
 	}
 	if err := json.Unmarshal(res.Stdout, &prs); err != nil {
-		return VerifyResult{Provider: ProviderGitHub, Reason: "gh-invalid-json"}, nil
+		return VerifyResult{Provider: ProviderGitHub, Kind: "pr", Reason: "gh-invalid-json"}, nil
 	}
 
 	merged := len(prs) > 0
-	return VerifyResult{Provider: ProviderGitHub, Merged: &merged}, nil
+	return VerifyResult{Provider: ProviderGitHub, Kind: "pr", Merged: &merged}, nil
 }
 
 func findGitHubCLI() (string, bool) {
