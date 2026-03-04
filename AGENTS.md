@@ -29,6 +29,7 @@
 - 테스트: `make test`
 - 빌드: `make build`
 - 실행: `make run ARGS="--help"`
+- PR 생성(선택): `make pr-create` (필요 시 `gh auth login` 먼저)
 
 ## Docs hygiene
 - 사용자에게 보이는 동작(명령/옵션/출력)이 바뀌면:

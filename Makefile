@@ -7,6 +7,12 @@ GO_TMP_DIR := $(CACHE_DIR)/go/tmp
 
 GOENV := env GOCACHE=$(GO_BUILD_CACHE) GOMODCACHE=$(GO_MOD_CACHE) GOTMPDIR=$(GO_TMP_DIR)
 
+GOPATH := $(shell go env GOPATH 2>/dev/null)
+GH_BIN := $(shell command -v gh 2>/dev/null)
+ifeq ($(strip $(GH_BIN)),)
+GH_BIN := $(GOPATH)/bin/gh
+endif
+
 VERSION ?= $(strip $(shell cat VERSION 2>/dev/null))
 LDFLAGS := -ldflags "-X wt/internal/buildinfo.Version=$(VERSION)"
 
@@ -68,3 +74,9 @@ clean: ## Remove local caches
 .PHONY: premerge
 premerge: check test ## Pre-merge gate (version/release notes + tests)
 	@./scripts/premerge_verify.sh
+
+.PHONY: pr-create
+pr-create: premerge ## Create GitHub PR via gh (requires gh auth login)
+	@[ -x "$(GH_BIN)" ] || { echo "gh not found. Install: 'go install github.com/cli/cli/v2/cmd/gh@latest'"; exit 1; }
+	@$(GH_BIN) auth status >/dev/null 2>&1 || { echo "gh not authenticated. Run: 'gh auth login'"; exit 1; }
+	@$(GH_BIN) pr create --fill
