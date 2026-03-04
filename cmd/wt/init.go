@@ -20,9 +20,11 @@ func newInitCmd() *cobra.Command {
 			switch shell {
 			case "zsh":
 				// Output-only: user must opt-in by pasting into their rc file.
-				// Includes an optional completion bridge so `wtg <TAB>` completes like `wt path <TAB>`.
+				// Includes an optional completion bridge so `wtg <TAB>` and `wcd <TAB>` complete like `wt path <TAB>`.
 				fmt.Fprintln(cmd.OutOrStdout(), "# wt shell integration (paste into your ~/.zshrc)")
+				fmt.Fprintln(cmd.OutOrStdout(), `wtr() { cd "$(wt root)" || return; }`)
 				fmt.Fprintln(cmd.OutOrStdout(), `wtg() { cd "$(wt path "$@")" || return; }`)
+				fmt.Fprintln(cmd.OutOrStdout(), `wcd() { cd "$(wt path "$@")" || return; }`)
 				fmt.Fprintln(cmd.OutOrStdout(), "")
 				fmt.Fprintln(cmd.OutOrStdout(), "# Optional: completion bridge (requires `wt` zsh completion to be installed)")
 				fmt.Fprintln(cmd.OutOrStdout(), `if whence -w compdef >/dev/null 2>&1; then`)
@@ -37,17 +39,25 @@ func newInitCmd() *cobra.Command {
 				fmt.Fprintln(cmd.OutOrStdout(), `      (( CURRENT++ ))`)
 				fmt.Fprintln(cmd.OutOrStdout(), `      _wt`)
 				fmt.Fprintln(cmd.OutOrStdout(), `    }`)
-				fmt.Fprintln(cmd.OutOrStdout(), `    compdef _wtg wtg`)
+				fmt.Fprintln(cmd.OutOrStdout(), `    compdef _wtg wtg wcd`)
 				fmt.Fprintln(cmd.OutOrStdout(), `  fi`)
 				fmt.Fprintln(cmd.OutOrStdout(), `fi`)
 				return nil
 			case "bash":
 				fmt.Fprintln(cmd.OutOrStdout(), "# wt shell integration (paste into your ~/.bashrc)")
+				fmt.Fprintln(cmd.OutOrStdout(), `wtr() { cd "$(wt root)" || return; }`)
 				fmt.Fprintln(cmd.OutOrStdout(), `wtg() { cd "$(wt path "$@")" || return; }`)
+				fmt.Fprintln(cmd.OutOrStdout(), `wcd() { cd "$(wt path "$@")" || return; }`)
 				return nil
 			case "fish":
 				fmt.Fprintln(cmd.OutOrStdout(), "# wt shell integration (paste into config.fish)")
+				fmt.Fprintln(cmd.OutOrStdout(), "function wtr")
+				fmt.Fprintln(cmd.OutOrStdout(), "  cd (wt root); or return")
+				fmt.Fprintln(cmd.OutOrStdout(), "end")
 				fmt.Fprintln(cmd.OutOrStdout(), "function wtg")
+				fmt.Fprintln(cmd.OutOrStdout(), "  cd (wt path $argv); or return")
+				fmt.Fprintln(cmd.OutOrStdout(), "end")
+				fmt.Fprintln(cmd.OutOrStdout(), "function wcd")
 				fmt.Fprintln(cmd.OutOrStdout(), "  cd (wt path $argv); or return")
 				fmt.Fprintln(cmd.OutOrStdout(), "end")
 				return nil

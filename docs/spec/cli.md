@@ -70,6 +70,16 @@
 
 TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 
+## `wt root`
+목표: 현재 Git 컨텍스트의 repo root 경로를 stdout으로 출력한다.
+
+규칙:
+- 기본 모드는 **경로만 출력**한다(추가 텍스트/색상 금지).
+- 출력은 `git rev-parse --show-toplevel` 기준 repo root path다.
+
+옵션:
+- `--json`: `{root}` 출력
+
 ## `wt run <query> -- <cmd...>`
 목표: `wt path`와 같은 매칭 규칙으로 worktree를 선택한 뒤, 그 디렉토리에서 `<cmd...>`를 실행한다.
 
@@ -153,3 +163,7 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 
 규칙:
 - `wt init`은 사용자의 rc 파일을 자동으로 수정하지 않는다(출력-only).
+- 현재 출력에는 다음 helper가 포함된다:
+  - `wtr`: `cd "$(wt root)"` 래퍼
+  - `wtg`: `cd "$(wt path ...)"` 래퍼
+  - `wcd`: `wtg`와 동일하게 `wt path`를 이용해 선택된 worktree로 이동하는 별칭용 래퍼

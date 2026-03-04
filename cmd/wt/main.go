@@ -53,6 +53,7 @@ func newRootCmd() *cobra.Command {
 
 	rootCmd.AddCommand(newListCmd())
 	rootCmd.AddCommand(newPathCmd())
+	rootCmd.AddCommand(newRepoRootCmd())
 	rootCmd.AddCommand(newRunCmd())
 	rootCmd.AddCommand(newInitCmd())
 	rootCmd.AddCommand(newCreateCmd())

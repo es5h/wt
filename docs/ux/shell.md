@@ -62,16 +62,20 @@ wt completion fish > ~/.config/fish/completions/wt.fish
 ```
 
 ## `wt init <shell>`
-목표: `cd "$(wt path ...)"`를 래핑하는 함수를 제공한다.
+목표: `wt root`/`wt path`의 path-only 출력을 `cd`와 연결하는 함수를 제공한다.
 
 권장 UX(초안):
 - 사용자는 아래 중 하나로 rc 파일에 추가한다.
 
 예시(컨셉, 스펙 확정 전):
 - zsh/bash:
+  - `wtr() { cd "$(wt root)" || return; }`
   - `wtg() { cd "$(wt path "$@")" || return; }`
+  - `wcd() { cd "$(wt path "$@")" || return; }`
 - fish:
+  - `function wtr; cd (wt root); or return; end`
   - `function wtg; cd (wt path $argv); or return; end`
+  - `function wcd; cd (wt path $argv); or return; end`
 
 ### 사용(추천)
 ```sh
@@ -83,10 +87,15 @@ wt init zsh
 eval "$(wt init zsh)"
 ```
 
-#### `wtg` 자동완성(zsh)
-`wt`의 zsh completion(`_wt`)을 설치했다면, `wt init zsh` 출력에는 `wtg <TAB>`가 `wt path <TAB>`처럼 동작하도록 “completion bridge”도 포함됩니다.
+### 포함되는 helper
+- `wtr`: 현재 Git 컨텍스트의 repo root로 이동한다. 내부적으로 `wt root`만 호출하므로 stdout path-only 정책을 유지한다.
+- `wtg`: `wt path`로 선택된 worktree로 이동한다.
+- `wcd`: `wtg`와 동일 동작의 추가 이름이다. 두 함수 모두 바이너리 자체가 `cd`하지 않고, 셸이 stdout path를 받아 이동한다.
 
-만약 `wtg` 탭이 파일명 완성으로만 동작하면:
+#### `wtg`/`wcd` 자동완성(zsh)
+`wt`의 zsh completion(`_wt`)을 설치했다면, `wt init zsh` 출력에는 `wtg <TAB>`와 `wcd <TAB>`가 모두 `wt path <TAB>`처럼 동작하도록 “completion bridge”도 포함됩니다.
+
+만약 `wtg`/`wcd` 탭이 파일명 완성으로만 동작하면:
 - `_wt` 설치/로딩 여부를 확인: `whence -v _wt`
 - completion 설치: 위 “zsh 설치(옵트인)” 섹션 참고
 
