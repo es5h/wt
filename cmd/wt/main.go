@@ -57,14 +57,16 @@ func newRootCmd() *cobra.Command {
 	rootCmd.AddCommand(newInitCmd())
 	rootCmd.AddCommand(newCreateCmd())
 	rootCmd.AddCommand(newPruneCmd())
+	rootCmd.AddCommand(newRemoveCmd())
 	return rootCmd
 }
 
 type depsKey struct{}
 
 type deps struct {
-	Runner runner.Runner
-	Cwd    string
+	Runner        runner.Runner
+	Cwd           string
+	IsInteractive func() bool
 }
 
 func ensureDeps(cmd *cobra.Command) error {
@@ -82,8 +84,9 @@ func ensureDeps(cmd *cobra.Command) error {
 	}
 
 	d := &deps{
-		Runner: runner.OSRunner{Env: os.Environ()},
-		Cwd:    cwd,
+		Runner:        runner.OSRunner{Env: os.Environ()},
+		Cwd:           cwd,
+		IsInteractive: stdinIsTTY,
 	}
 
 	cmd.SetContext(context.WithValue(ctx, depsKey{}, d))
