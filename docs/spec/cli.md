@@ -46,6 +46,21 @@
 
 TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 
+## `wt run <query> -- <cmd...>`
+목표: `wt goto`와 같은 매칭 규칙으로 worktree를 선택한 뒤, 그 디렉토리에서 `<cmd...>`를 실행한다.
+
+규칙:
+- `<query>` 매칭/모호성 처리/에러 코드는 `wt goto`와 동일하다.
+- 기본 모드는 하위 프로세스의 stdout/stderr를 그대로 전달하고, 하위 프로세스의 종료 코드를 그대로 반환한다.
+- `--json`은 stdout에 선택된 worktree와 실행 결과를 JSON으로 출력한다.
+
+옵션:
+- `--json`: `{path, command, exitCode}` 출력
+
+현재 구현 규칙:
+- `command`는 JSON에서 argv 배열로 출력한다.
+- `--json` 사용 시 stdout은 JSON 전용이며, 하위 프로세스의 stdout/stderr는 중계하지 않는다.
+
 ## `wt create <branch>`
 목표: `<branch>`에 대한 worktree를 생성한다.
 

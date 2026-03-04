@@ -28,7 +28,9 @@ func run(ctx context.Context, args []string) int {
 
 	var exitErr *exitError
 	if errors.As(err, &exitErr) {
-		fmt.Fprintln(os.Stderr, exitErr.Err)
+		if exitErr.Err != nil {
+			fmt.Fprintln(os.Stderr, exitErr.Err)
+		}
 		return exitErr.Code
 	}
 
@@ -51,6 +53,7 @@ func newRootCmd() *cobra.Command {
 
 	rootCmd.AddCommand(newListCmd())
 	rootCmd.AddCommand(newGotoCmd())
+	rootCmd.AddCommand(newRunCmd())
 	rootCmd.AddCommand(newInitCmd())
 	rootCmd.AddCommand(newCreateCmd())
 	return rootCmd
