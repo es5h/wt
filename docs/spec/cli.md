@@ -72,3 +72,6 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 - `wt init zsh` → stdout에 function 정의를 출력(사용자가 rc에 추가)
 
 셸 통합/완성 관련 상세는 `docs/ux/shell.md` 참고.
+
+규칙:
+- `wt init`은 사용자의 rc 파일을 자동으로 수정하지 않는다(출력-only).
