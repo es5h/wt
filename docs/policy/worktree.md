@@ -69,3 +69,8 @@ repo-local git config 예시:
 의도:
 - squash merge 환경에서 로컬 git `[merged]`와 GitHub PR merged 여부가 다를 수 있으므로, 의미를 분리해 사용자에게 명확히 보여준다.
 - 텍스트 출력 마커는 provider 일반형(`[merged-hosting:<provider>]`)을 사용하고, 상세 의미는 JSON(`hostingProvider`, `hostingKind`, `hostingChangeNumber`, `hostingChangeTitle`, `hostingChangeUrl`)에 둔다.
+
+## Prune safety
+- `wt prune`는 stale/prunable entry 정리 전용이다.
+- 기본 동작은 preview-only 이어야 하며, 실제 변경은 명시적 opt-in(`--apply`)일 때만 수행한다.
+- 실제 prune은 `git worktree prune --expire now`로 제한하고, 정상 worktree 디렉토리를 직접 삭제하지 않는다.

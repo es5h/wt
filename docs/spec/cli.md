@@ -112,6 +112,23 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 - `--force`: 확인 생략
 - `--dry-run`
 
+## `wt prune`
+목표: stale/prunable worktree entry를 preview하거나 정리한다.
+
+규칙:
+- 기본 동작은 preview-only 이다. 실제 변경은 하지 않는다.
+- `git worktree list`에서 `prunable`로 표시되는 entry만 대상이다.
+- `--apply`가 있을 때만 `git worktree prune --expire now`를 실행한다.
+- primary worktree나 정상 worktree는 직접 제거하지 않는다.
+
+옵션:
+- `--apply`: 실제 prune 실행
+- `--json`: `{path, branch, pruneReason, action, removed}` 배열 출력
+
+현재 구현 규칙:
+- 기본 text 출력은 `would-prune` / `pruned` / `kept` 상태를 한 줄씩 보여준다.
+- `--apply` 후에는 prune 전 후보 목록을 기준으로, prune 후 다시 조회해 `removed` 여부를 계산한다.
+
 ## `wt init <shell>`
 목표: `path`가 `cd`될 수 있도록 셸 함수/alias를 출력한다.
 

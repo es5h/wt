@@ -42,6 +42,14 @@ func WorktreeList(ctx context.Context, r runner.Runner, repoRoot string) ([]work
 	return wts, nil
 }
 
+func WorktreePrune(ctx context.Context, r runner.Runner, repoRoot string) error {
+	res, err := r.Run(ctx, repoRoot, "git", "worktree", "prune", "--expire", "now")
+	if err != nil {
+		return fmt.Errorf("git worktree prune --expire now: %s", commandError(res, err))
+	}
+	return nil
+}
+
 func DefaultBaseRef(ctx context.Context, r runner.Runner, repoRoot string) string {
 	res, err := r.Run(ctx, repoRoot, "git", "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
 	if err == nil {
