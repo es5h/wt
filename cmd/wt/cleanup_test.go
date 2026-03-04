@@ -1,0 +1,650 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"wt/internal/runner"
+)
+
+func TestCleanup_PreviewMixed(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+
+	removePath := filepath.Join(t.TempDir(), "feature-remove")
+	if err := os.MkdirAll(filepath.Join(removePath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create remove worktree: %v", err)
+	}
+
+	currentPath := filepath.Join(t.TempDir(), "current")
+	if err := os.MkdirAll(filepath.Join(currentPath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create current worktree: %v", err)
+	}
+
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree /repo/.wt/prunable
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/prunable
+prunable gitdir file points to non-existent location
+
+worktree `+removePath+`
+HEAD 1111111111111111111111111111111111111111
+branch refs/heads/feature-remove
+
+worktree `+currentPath+`
+HEAD 2222222222222222222222222222222222222222
+branch refs/heads/current
+`) + "\n"
+
+	root := newRootCmd()
+	var stdout, stderr bytes.Buffer
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs([]string{"cleanup"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"},
+					res:     runner.Result{Stdout: []byte("refs/remotes/origin/main\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "origin/main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{ExitCode: 2},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/main", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/prunable", "origin/main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     assertErr("exit 1"),
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-remove", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/current", "origin/main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     assertErr("exit 1"),
+				},
+			},
+		},
+		Cwd: cwd,
+	}))
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "would-prune  /repo/.wt/prunable  (prunable)  [gitdir file points to non-existent location]") {
+		t.Fatalf("stdout = %q, want prune preview", out)
+	}
+	if !strings.Contains(out, "would-remove  "+removePath+"  (feature-remove)  [merged:main]") {
+		t.Fatalf("stdout = %q, want remove preview", out)
+	}
+	if !strings.Contains(out, "skip  /repo  (main)  [current]") {
+		t.Fatalf("stdout = %q, want current skip", out)
+	}
+	if !strings.Contains(out, "skip  "+currentPath+"  (current)  [not-recommended]") {
+		t.Fatalf("stdout = %q, want non-recommended skip", out)
+	}
+}
+
+func TestCleanup_ApplyMixed(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+
+	removePath := filepath.Join(t.TempDir(), "feature-remove")
+	if err := os.MkdirAll(filepath.Join(removePath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create remove worktree: %v", err)
+	}
+
+	porcelainBefore := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree /repo/.wt/prunable
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/prunable
+prunable gitdir file points to non-existent location
+
+worktree `+removePath+`
+HEAD 1111111111111111111111111111111111111111
+branch refs/heads/feature-remove
+`) + "\n"
+
+	porcelainAfterPrune := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree `+removePath+`
+HEAD 1111111111111111111111111111111111111111
+branch refs/heads/feature-remove
+`) + "\n"
+
+	root := newRootCmd()
+	var stdout, stderr bytes.Buffer
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs([]string{"cleanup", "--apply"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelainBefore), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"},
+					res:     runner.Result{Stdout: []byte("refs/remotes/origin/main\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "origin/main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{ExitCode: 2},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/main", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/prunable", "origin/main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     assertErr("exit 1"),
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-remove", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "prune", "--expire", "now"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelainAfterPrune), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "remove", "--force", removePath},
+					res:     runner.Result{ExitCode: 0},
+				},
+			},
+		},
+		Cwd: cwd,
+	}))
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "pruned  /repo/.wt/prunable  (prunable)") {
+		t.Fatalf("stdout = %q, want pruned line", out)
+	}
+	if !strings.Contains(out, "removed  "+removePath+"  (feature-remove)") {
+		t.Fatalf("stdout = %q, want removed line", out)
+	}
+}
+
+func TestCleanup_JSONIncludesMergedReasons(t *testing.T) {
+	const cwd = "/cwd"
+	const repo = "/repo"
+	const ghBin = "/mock/bin/gh"
+	t.Setenv("WT_GH_BIN", ghBin)
+
+	removePath := filepath.Join(t.TempDir(), "feature-remove")
+	if err := os.MkdirAll(filepath.Join(removePath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create remove worktree: %v", err)
+	}
+
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree `+removePath+`
+HEAD 1111111111111111111111111111111111111111
+branch refs/heads/feature-remove
+`) + "\n"
+
+	root := newRootCmd()
+	var stdout, stderr bytes.Buffer
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs([]string{"cleanup", "--json"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"},
+					res:     runner.Result{Stdout: []byte("refs/remotes/origin/main\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "origin/main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{Stdout: []byte("git@github.com:es5h/wt.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/main", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    ghBin,
+					args:    []string{"auth", "status"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    ghBin,
+					args:    []string{"pr", "list", "--state", "merged", "--head", "main", "--json", "number,title,url", "--limit", "1", "--base", "main"},
+					res:     runner.Result{Stdout: []byte(`[]`), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-remove", "origin/main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     assertErr("exit 1"),
+				},
+				{
+					workDir: repo,
+					name:    ghBin,
+					args:    []string{"auth", "status"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    ghBin,
+					args:    []string{"pr", "list", "--state", "merged", "--head", "feature-remove", "--json", "number,title,url", "--limit", "1", "--base", "main"},
+					res:     runner.Result{Stdout: []byte(`[{"number":42,"title":"feature remove","url":"https://github.com/es5h/wt/pull/42"}]`), ExitCode: 0},
+				},
+			},
+		},
+		Cwd: cwd,
+	}))
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+
+	var got []cleanupItem
+	if err := json.Unmarshal(stdout.Bytes(), &got); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("len(got) = %d, want 2", len(got))
+	}
+	if got[1].RecommendedAction != "remove" || got[1].Action != "would-remove" {
+		t.Fatalf("unexpected cleanup item: %#v", got[1])
+	}
+	if got[1].MergedIntoBase == nil || *got[1].MergedIntoBase {
+		t.Fatalf("mergedIntoBase = %#v, want false", got[1].MergedIntoBase)
+	}
+	if got[1].MergedViaHosting == nil || !*got[1].MergedViaHosting {
+		t.Fatalf("mergedViaHosting = %#v, want true", got[1].MergedViaHosting)
+	}
+	if got[1].Reason != "merged-hosting:github#42" {
+		t.Fatalf("reason = %q, want hosting merge reason", got[1].Reason)
+	}
+}
+
+func TestCleanup_SkipExceptions(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+
+	detachedPath := filepath.Join(t.TempDir(), "detached")
+	if err := os.MkdirAll(filepath.Join(detachedPath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create detached worktree: %v", err)
+	}
+
+	lockedPath := filepath.Join(t.TempDir(), "locked")
+	if err := os.MkdirAll(filepath.Join(lockedPath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create locked worktree: %v", err)
+	}
+
+	missingGitPath := filepath.Join(t.TempDir(), "missing-git")
+	if err := os.MkdirAll(missingGitPath, 0o755); err != nil {
+		t.Fatalf("failed to create missing-git worktree: %v", err)
+	}
+
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree `+detachedPath+`
+HEAD 1111111111111111111111111111111111111111
+detached
+
+worktree `+lockedPath+`
+HEAD 2222222222222222222222222222222222222222
+branch refs/heads/locked
+locked manual
+
+worktree `+missingGitPath+`
+HEAD 3333333333333333333333333333333333333333
+branch refs/heads/missing-git
+`) + "\n"
+
+	root := newRootCmd()
+	var stdout, stderr bytes.Buffer
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs([]string{"cleanup"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"},
+					res:     runner.Result{Stdout: []byte("refs/remotes/origin/main\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "origin/main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{ExitCode: 2},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/main", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/locked", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/missing-git", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+			},
+		},
+		Cwd: cwd,
+	}))
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+
+	out := stdout.String()
+	for _, want := range []string{
+		"skip  /repo  (main)  [current]",
+		"skip  " + detachedPath + "  [detached]",
+		"skip  " + lockedPath + "  (locked)  [locked]",
+		"skip  " + missingGitPath + "  (missing-git)  [missing-git]",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("stdout = %q, want %q", out, want)
+		}
+	}
+}
+
+func TestCleanup_SkipPrimary(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo/.wt/current"
+
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree /repo/.wt/current
+HEAD 1111111111111111111111111111111111111111
+branch refs/heads/current
+`) + "\n"
+
+	root := newRootCmd()
+	var stdout, stderr bytes.Buffer
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs([]string{"cleanup"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"},
+					res:     runner.Result{Stdout: []byte("refs/remotes/origin/main\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "origin/main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{ExitCode: 2},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte("/repo/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/main", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/current", "origin/main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     assertErr("exit 1"),
+				},
+			},
+		},
+		Cwd: cwd,
+	}))
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "skip  /repo  (main)  [primary]") {
+		t.Fatalf("stdout = %q, want primary skip", out)
+	}
+	if !strings.Contains(out, "skip  /repo/.wt/current  (current)  [current]") {
+		t.Fatalf("stdout = %q, want current skip", out)
+	}
+}
+
+type staticErr string
+
+func (e staticErr) Error() string { return string(e) }
+
+func assertErr(msg string) error { return staticErr(msg) }
