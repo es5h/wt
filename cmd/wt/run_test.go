@@ -165,3 +165,63 @@ branch refs/heads/feature-x
 		t.Fatalf("exitCode = %d, want 23", got.ExitCode)
 	}
 }
+
+func TestRun_AmbiguousQuery_HintsPathTUI(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+	porcelain := strings.TrimSpace(`
+worktree /repo/.wt/feature-x
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+
+worktree /repo/.wt/feature-y
+HEAD fedcbafedcbafedcbafedcbafedcbafedcbafedc
+branch refs/heads/feature-y
+`) + "\n"
+
+	r := &fakeRunner{
+		t: t,
+		calls: []fakeCall{
+			{
+				workDir: cwd,
+				name:    "git",
+				args:    []string{"rev-parse", "--show-toplevel"},
+				res: runner.Result{
+					Stdout:   []byte(repo + "\n"),
+					ExitCode: 0,
+				},
+			},
+			{
+				workDir: repo,
+				name:    "git",
+				args:    []string{"worktree", "list", "--porcelain"},
+				res: runner.Result{
+					Stdout:   []byte(porcelain),
+					ExitCode: 0,
+				},
+			},
+		},
+	}
+
+	root := newRootCmd()
+	root.SetArgs([]string{"run", "feature", "--", "pwd"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{Runner: r, Cwd: cwd}))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var exitErr *exitError
+	if !errors.As(err, &exitErr) || exitErr.Code != 1 {
+		t.Fatalf("err = %#v, want exitError code 1", err)
+	}
+	if !strings.Contains(err.Error(), "wt run: 2 matches for \"feature\"") {
+		t.Fatalf("err = %q, want ambiguous match summary", err.Error())
+	}
+	if !strings.Contains(err.Error(), "resolve the path first with `wt path <query> --tui`") {
+		t.Fatalf("err = %q, want wt path --tui guidance", err.Error())
+	}
+}

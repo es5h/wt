@@ -72,8 +72,8 @@
 - 후보가 0개면 non-zero exit + stderr에 후보/가이드 출력.
 - 후보가 1개면 자동 선택.
 - 후보가 2개 이상이면:
-  - 기본 동작은 정책 확정 전(로드맵: `docs/roadmap/README.md`)
-  - `--tui`가 있으면 TUI로 선택(스펙: `docs/ux/tui.md`)
+  - `--tui`가 없으면 기존 ambiguous text 에러 흐름을 유지한다.
+  - `--tui`가 있으면 기존 매칭 결과 후보만 TUI로 선택한다(스펙: `docs/ux/tui.md`)
   - `--no-tui`가 있으면 에러(스크립트 안전)
 
 옵션(초안):
@@ -87,8 +87,12 @@
 
 현재 구현 상태:
 - `--tui`는 현재 `wt path`에만 연결되어 있다.
-- TUI는 현재 repo의 전체 worktree 목록을 기반으로 단일 선택한다.
-- `wt path <query> --tui`는 query를 초기 filter 값으로 사용한다.
+- `wt path --tui`는 현재 repo의 전체 worktree 목록을 기반으로 단일 선택한다.
+- `wt path <query> --tui`는 현재 `wt path`와 동일한 매칭 규칙을 먼저 적용한다.
+  - 매칭 0개면 기존처럼 `no matches` 에러로 종료한다.
+  - 매칭 1개면 TUI를 띄우지 않고 바로 path-only 출력한다.
+  - 매칭 2개 이상이면 해당 후보만 TUI로 선택한다.
+- 다중 후보 TUI에서는 query를 초기 filter 값으로 사용한다.
 - TUI는 `stdin` + `stderr`가 둘 다 터미널일 때만 실행한다. 화면은 stderr에 렌더링하고, 최종 선택 path만 stdout으로 출력한다.
 - 취소(`Esc`/`Ctrl+C`) 시 exit code `130`과 함께 명확한 에러를 반환한다.
 - `--tui`와 `--create`는 함께 쓸 수 없다.

@@ -764,6 +764,70 @@ func TestPathTUI_RequiresTTY(t *testing.T) {
 	}
 }
 
+func TestPathTUI_WithoutQuery_UsesWholeWorktreeList(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree /repo/.wt/feature-x
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+`) + "\n"
+
+	r := &fakeRunner{
+		t: t,
+		calls: []fakeCall{
+			{
+				workDir: cwd,
+				name:    "git",
+				args:    []string{"rev-parse", "--show-toplevel"},
+				res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+			},
+			{
+				workDir: repo,
+				name:    "git",
+				args:    []string{"worktree", "list", "--porcelain"},
+				res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+			},
+		},
+	}
+
+	root := newRootCmd()
+	var stdout, stderr bytes.Buffer
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs([]string{"path", "--tui"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner:    r,
+		Cwd:       cwd,
+		CanUseTUI: func() bool { return true },
+		PickWorktree: func(_ *cobra.Command, wts []worktree.Worktree, initialFilter string) (worktree.Worktree, error) {
+			if initialFilter != "" {
+				t.Fatalf("initialFilter = %q, want empty", initialFilter)
+			}
+			if len(wts) != 2 {
+				t.Fatalf("len(wts) = %d, want 2", len(wts))
+			}
+			return wts[0], nil
+		},
+	}))
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+	if stdout.String() != "/repo\n" {
+		t.Fatalf("stdout = %q, want only path", stdout.String())
+	}
+}
+
 func TestPathTUI_UsesPickerSelection(t *testing.T) {
 	t.Parallel()
 
@@ -777,6 +841,10 @@ branch refs/heads/main
 worktree /repo/.wt/feature-x
 HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
 branch refs/heads/feature-x
+
+worktree /repo/.wt/feature-y
+HEAD fedcbafedcbafedcbafedcbafedcbafedcbafedc
+branch refs/heads/feature-y
 `) + "\n"
 
 	r := &fakeRunner{
@@ -819,7 +887,69 @@ branch refs/heads/feature-x
 			if len(wts) != 2 {
 				t.Fatalf("len(wts) = %d, want 2", len(wts))
 			}
+			if wts[0].Path != "/repo/.wt/feature-x" || wts[1].Path != "/repo/.wt/feature-y" {
+				t.Fatalf("picker candidates = %#v, want only matched feature worktrees", wts)
+			}
 			return wts[1], nil
+		},
+	}))
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+	if stdout.String() != "/repo/.wt/feature-y\n" {
+		t.Fatalf("stdout = %q, want only path", stdout.String())
+	}
+}
+
+func TestPathTUI_WithSingleQueryMatch_SkipsPicker(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree /repo/.wt/feature-x
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+`) + "\n"
+
+	r := &fakeRunner{
+		t: t,
+		calls: []fakeCall{
+			{
+				workDir: cwd,
+				name:    "git",
+				args:    []string{"rev-parse", "--show-toplevel"},
+				res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+			},
+			{
+				workDir: repo,
+				name:    "git",
+				args:    []string{"worktree", "list", "--porcelain"},
+				res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+			},
+		},
+	}
+
+	root := newRootCmd()
+	var stdout, stderr bytes.Buffer
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs([]string{"path", "feature-x", "--tui"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner:    r,
+		Cwd:       cwd,
+		CanUseTUI: func() bool { return true },
+		PickWorktree: func(_ *cobra.Command, _ []worktree.Worktree, _ string) (worktree.Worktree, error) {
+			t.Fatal("picker should not be called for a single match")
+			return worktree.Worktree{}, nil
 		},
 	}))
 
