@@ -87,6 +87,21 @@ func ConfigGetLocal(ctx context.Context, r runner.Runner, repoRoot string, key s
 	return "", fmt.Errorf("git config --local --get %s: %s", key, commandError(res, err))
 }
 
+func RemoteURL(ctx context.Context, r runner.Runner, repoRoot string, remote string) (string, error) {
+	if strings.TrimSpace(remote) == "" {
+		return "", fmt.Errorf("empty remote")
+	}
+
+	res, err := r.Run(ctx, repoRoot, "git", "remote", "get-url", remote)
+	if err == nil {
+		return strings.TrimSpace(string(res.Stdout)), nil
+	}
+	if res.ExitCode == 2 {
+		return "", nil
+	}
+	return "", fmt.Errorf("git remote get-url %s: %s", remote, commandError(res, err))
+}
+
 func IsAncestor(ctx context.Context, r runner.Runner, repoRoot string, olderRef string, newerRef string) (bool, error) {
 	res, err := r.Run(ctx, repoRoot, "git", "merge-base", "--is-ancestor", olderRef, newerRef)
 	if err == nil {
