@@ -20,9 +20,11 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: "1.26.0"
           cache: false
+
+      - name: Go version
+        run: go version
 
       - name: Pre-merge gate
         run: make premerge
-
