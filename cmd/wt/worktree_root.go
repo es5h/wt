@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,7 +10,7 @@ import (
 	"wt/internal/git"
 )
 
-func resolveCreateTargetPath(ctx context.Context, d *deps, repoRoot string, branch string, opts createOpts) (string, error) {
+func resolveCreateTargetPath(ctx context.Context, d *deps, repoRoot string, primaryRoot string, branch string, opts createOpts) (string, error) {
 	explicitPath := strings.TrimSpace(opts.Path)
 	if explicitPath != "" {
 		return explicitPath, nil
@@ -20,19 +21,23 @@ func resolveCreateTargetPath(ctx context.Context, d *deps, repoRoot string, bran
 		return "", usageError(err)
 	}
 
-	root, err := resolveWorktreeRoot(ctx, d, repoRoot, opts.Root)
+	root, err := resolveWorktreeRoot(ctx, d, repoRoot, primaryRoot, opts.Root)
 	if err != nil {
 		return "", err
 	}
 	return filepath.Join(root, branchPathPart), nil
 }
 
-func resolveWorktreeRoot(ctx context.Context, d *deps, repoRoot string, cliRoot string) (string, error) {
+func resolveWorktreeRoot(ctx context.Context, d *deps, repoRoot string, primaryRoot string, cliRoot string) (string, error) {
+	if strings.TrimSpace(primaryRoot) == "" {
+		return "", fmt.Errorf("missing primary root (internal error)")
+	}
+
 	switch {
 	case strings.TrimSpace(cliRoot) != "":
-		return normalizeWorktreeRoot(repoRoot, cliRoot), nil
+		return normalizeWorktreeRoot(primaryRoot, cliRoot), nil
 	case strings.TrimSpace(os.Getenv("WT_ROOT")) != "":
-		return normalizeWorktreeRoot(repoRoot, os.Getenv("WT_ROOT")), nil
+		return normalizeWorktreeRoot(primaryRoot, os.Getenv("WT_ROOT")), nil
 	}
 
 	configRoot, err := git.ConfigGetLocal(ctx, d.Runner, repoRoot, "wt.root")
@@ -40,19 +45,19 @@ func resolveWorktreeRoot(ctx context.Context, d *deps, repoRoot string, cliRoot 
 		return "", err
 	}
 	if strings.TrimSpace(configRoot) != "" {
-		return normalizeWorktreeRoot(repoRoot, configRoot), nil
+		return normalizeWorktreeRoot(primaryRoot, configRoot), nil
 	}
 
-	return filepath.Join(repoRoot, ".wt"), nil
+	return filepath.Join(primaryRoot, ".wt"), nil
 }
 
-func normalizeWorktreeRoot(repoRoot string, root string) string {
+func normalizeWorktreeRoot(baseRoot string, root string) string {
 	root = strings.TrimSpace(root)
 	if root == "" {
-		return filepath.Join(repoRoot, ".wt")
+		return filepath.Join(baseRoot, ".wt")
 	}
 	if filepath.IsAbs(root) {
 		return filepath.Clean(root)
 	}
-	return filepath.Clean(filepath.Join(repoRoot, root))
+	return filepath.Clean(filepath.Join(baseRoot, root))
 }

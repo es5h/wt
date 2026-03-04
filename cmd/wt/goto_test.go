@@ -320,6 +320,15 @@ branch refs/heads/main
 			{
 				workDir: repo,
 				name:    "git",
+				args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+				res: runner.Result{
+					Stdout:   []byte("/repo/.git\n"),
+					ExitCode: 0,
+				},
+			},
+			{
+				workDir: repo,
+				name:    "git",
 				args:    []string{"config", "--local", "--get", "wt.root"},
 				res: runner.Result{
 					ExitCode: 1,
@@ -418,6 +427,15 @@ branch refs/heads/main
 				args:    []string{"worktree", "list", "--porcelain"},
 				res: runner.Result{
 					Stdout:   []byte(porcelain),
+					ExitCode: 0,
+				},
+			},
+			{
+				workDir: repo,
+				name:    "git",
+				args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+				res: runner.Result{
+					Stdout:   []byte("/repo/.git\n"),
 					ExitCode: 0,
 				},
 			},

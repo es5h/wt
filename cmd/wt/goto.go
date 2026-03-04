@@ -72,7 +72,12 @@ func newGotoCmd() *cobra.Command {
 					}
 				}
 
-				path, err := createWorktreeFromList(ctx, d, repoRoot, branch, createOpts{
+				primaryRoot, err := git.PrimaryWorktreeRoot(ctx, d.Runner, repoRoot)
+				if err != nil {
+					return err
+				}
+
+				path, err := createWorktreeFromList(ctx, d, repoRoot, primaryRoot, branch, createOpts{
 					Path: createPath,
 					Root: createRoot,
 					From: createFrom,

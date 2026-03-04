@@ -36,6 +36,15 @@ branch refs/heads/main
 			{
 				workDir: repo,
 				name:    "git",
+				args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+				res: runner.Result{
+					Stdout:   []byte("/repo/.git\n"),
+					ExitCode: 0,
+				},
+			},
+			{
+				workDir: repo,
+				name:    "git",
 				args:    []string{"worktree", "list", "--porcelain"},
 				res: runner.Result{
 					Stdout:   []byte(porcelain),
@@ -140,6 +149,15 @@ branch refs/heads/main
 			{
 				workDir: repo,
 				name:    "git",
+				args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+				res: runner.Result{
+					Stdout:   []byte("/repo/.git\n"),
+					ExitCode: 0,
+				},
+			},
+			{
+				workDir: repo,
+				name:    "git",
 				args:    []string{"worktree", "list", "--porcelain"},
 				res: runner.Result{
 					Stdout:   []byte(porcelain),
@@ -218,6 +236,15 @@ branch refs/heads/main
 			{
 				workDir: repo,
 				name:    "git",
+				args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+				res: runner.Result{
+					Stdout:   []byte("/repo/.git\n"),
+					ExitCode: 0,
+				},
+			},
+			{
+				workDir: repo,
+				name:    "git",
 				args:    []string{"worktree", "list", "--porcelain"},
 				res: runner.Result{
 					Stdout:   []byte(porcelain),
@@ -287,6 +314,15 @@ branch refs/heads/main
 			{
 				workDir: repo,
 				name:    "git",
+				args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+				res: runner.Result{
+					Stdout:   []byte("/repo/.git\n"),
+					ExitCode: 0,
+				},
+			},
+			{
+				workDir: repo,
+				name:    "git",
 				args:    []string{"worktree", "list", "--porcelain"},
 				res: runner.Result{
 					Stdout:   []byte(porcelain),
@@ -350,6 +386,15 @@ branch refs/heads/main
 				args:    []string{"rev-parse", "--show-toplevel"},
 				res: runner.Result{
 					Stdout:   []byte(repo + "\n"),
+					ExitCode: 0,
+				},
+			},
+			{
+				workDir: repo,
+				name:    "git",
+				args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+				res: runner.Result{
+					Stdout:   []byte("/repo/.git\n"),
 					ExitCode: 0,
 				},
 			},

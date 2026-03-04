@@ -19,6 +19,10 @@
 ## PR body template
 아래 섹션을 PR 본문에 포함하는 것을 권장합니다.
 
+추가:
+- GitHub PR template: `.github/pull_request_template.md`를 기본으로 사용합니다.
+- 특히 `## E2E guide`는 PR에서 빠지기 쉬우므로, CI에서 “섹션 존재”를 체크합니다(섹션이 불필요하면 `N/A` + 이유를 적습니다).
+
 작성 규칙:
 - 기본 언어는 한글로 한다. (코드/명령/경로/식별자는 원문 유지 가능)
 - 예시 경로는 실제 로컬 경로 대신 `/path/to/wt`, `<repo>`, `<query>` 같은 플레이스홀더를 사용한다.
