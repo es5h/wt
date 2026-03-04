@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"wt/internal/git"
+	"wt/internal/worktree"
 )
 
 type removeResult struct {
@@ -23,25 +24,32 @@ func newRemoveCmd() *cobra.Command {
 	var dryRun bool
 	var force bool
 	var jsonOut bool
+	var tui bool
 
 	cmd := &cobra.Command{
-		Use:   "remove <query>",
+		Use:   "remove [query]",
 		Short: "Remove a selected worktree",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			return completePathQuery(cmd, args, toComplete)
 		},
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			query := strings.TrimSpace(args[0])
-			if query == "" {
-				return usageError(fmt.Errorf("wt remove: query cannot be empty"))
+			query := ""
+			if len(args) > 0 {
+				query = strings.TrimSpace(args[0])
+			}
+			if query == "" && !tui {
+				return usageError(fmt.Errorf("wt remove: query is required unless --tui is set"))
 			}
 
 			d, err := getDeps(cmd)
 			if err != nil {
 				return err
+			}
+			if tui && (d.CanUseTUI == nil || !d.CanUseTUI()) {
+				return usageError(fmt.Errorf("wt remove: --tui requires a TTY on stdin and stderr"))
 			}
 
 			interactive := d.IsInteractive != nil && d.IsInteractive()
@@ -64,18 +72,12 @@ func newRemoveCmd() *cobra.Command {
 				return err
 			}
 
-			chosen, err := resolveMatchedWorktree("wt remove", wts, query)
+			chosen, err := selectRemoveTarget(cmd, d, wts, query, tui)
 			if err != nil {
 				return err
 			}
-			if chosen.Path == repoRoot {
-				return usageError(fmt.Errorf("wt remove: cannot remove current worktree: %s", chosen.Path))
-			}
-			if chosen.Path == primaryRoot {
-				return usageError(fmt.Errorf("wt remove: cannot remove primary worktree: %s", chosen.Path))
-			}
-			if chosen.Prunable {
-				return usageError(fmt.Errorf("wt remove: target is prunable; use 'wt prune --apply': %s", chosen.Path))
+			if err := validateRemoveTarget(repoRoot, primaryRoot, chosen); err != nil {
+				return err
 			}
 
 			result := removeResult{
@@ -125,7 +127,39 @@ func newRemoveCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "preview removal without changing anything")
 	cmd.Flags().BoolVar(&force, "force", false, "actually remove the selected worktree")
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "structured JSON output")
+	cmd.Flags().BoolVar(&tui, "tui", false, "use TUI selection when query is omitted or ambiguous")
 	return cmd
+}
+
+func selectRemoveTarget(cmd *cobra.Command, d *deps, wts []worktree.Worktree, query string, tui bool) (worktree.Worktree, error) {
+	if !tui {
+		return resolveMatchedWorktree("wt remove", wts, query)
+	}
+
+	matches := matchWorktrees(wts, query)
+	switch {
+	case query == "":
+		return selectWorktreeWithTUI(cmd, d, "wt remove", wts, "")
+	case len(matches) == 0:
+		return worktree.Worktree{}, &exitError{Code: 1, Err: fmt.Errorf("wt remove: no matches for %q", query)}
+	case len(matches) == 1:
+		return matches[0], nil
+	default:
+		return selectWorktreeWithTUI(cmd, d, "wt remove", matches, query)
+	}
+}
+
+func validateRemoveTarget(repoRoot string, primaryRoot string, chosen worktree.Worktree) error {
+	if chosen.Path == repoRoot {
+		return usageError(fmt.Errorf("wt remove: cannot remove current worktree: %s", chosen.Path))
+	}
+	if chosen.Path == primaryRoot {
+		return usageError(fmt.Errorf("wt remove: cannot remove primary worktree: %s", chosen.Path))
+	}
+	if chosen.Prunable {
+		return usageError(fmt.Errorf("wt remove: target is prunable; use 'wt prune --apply': %s", chosen.Path))
+	}
+	return nil
 }
 
 func confirmRemove(in io.Reader, out io.Writer, path string, branch string) (bool, error) {
