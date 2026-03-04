@@ -72,6 +72,21 @@ func RefExists(ctx context.Context, r runner.Runner, repoRoot string, ref string
 	return false, fmt.Errorf("git rev-parse --verify %s: %s", ref, commandError(res, err))
 }
 
+func ConfigGetLocal(ctx context.Context, r runner.Runner, repoRoot string, key string) (string, error) {
+	if strings.TrimSpace(key) == "" {
+		return "", fmt.Errorf("empty config key")
+	}
+
+	res, err := r.Run(ctx, repoRoot, "git", "config", "--local", "--get", key)
+	if err == nil {
+		return strings.TrimSpace(string(res.Stdout)), nil
+	}
+	if res.ExitCode == 1 {
+		return "", nil
+	}
+	return "", fmt.Errorf("git config --local --get %s: %s", key, commandError(res, err))
+}
+
 func IsAncestor(ctx context.Context, r runner.Runner, repoRoot string, olderRef string, newerRef string) (bool, error) {
 	res, err := r.Run(ctx, repoRoot, "git", "merge-base", "--is-ancestor", olderRef, newerRef)
 	if err == nil {

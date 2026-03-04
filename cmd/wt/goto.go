@@ -20,6 +20,7 @@ func newGotoCmd() *cobra.Command {
 	var tui bool
 	var noTui bool
 	var createPath string
+	var createRoot string
 	var createFrom string
 
 	cmd := &cobra.Command{
@@ -73,6 +74,7 @@ func newGotoCmd() *cobra.Command {
 
 				path, err := createWorktreeFromList(ctx, d, repoRoot, branch, createOpts{
 					Path: createPath,
+					Root: createRoot,
 					From: createFrom,
 				}, wts)
 				if err != nil {
@@ -108,7 +110,8 @@ func newGotoCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&create, "create", false, "create worktree if missing")
 	cmd.Flags().BoolVar(&tui, "tui", false, "use TUI selection (not implemented yet)")
 	cmd.Flags().BoolVar(&noTui, "no-tui", false, "disable TUI selection (reserved)")
-	cmd.Flags().StringVar(&createPath, "path", "", "worktree path for --create (default: <repo>/.wt/<branch>)")
+	cmd.Flags().StringVar(&createPath, "path", "", "worktree path for --create")
+	cmd.Flags().StringVar(&createRoot, "root", "", "worktree root for --create default path resolution")
 	cmd.Flags().StringVar(&createFrom, "from", "", "start point for --create (default: origin/<branch> if exists, else origin/HEAD or main)")
 
 	return cmd

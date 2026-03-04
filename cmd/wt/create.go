@@ -15,6 +15,7 @@ import (
 
 type createOpts struct {
 	Path   string
+	Root   string
 	From   string
 	DryRun bool
 }
@@ -56,7 +57,8 @@ func newCreateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&opts.Path, "path", "", "worktree path (default: <repo>/.wt/<branch>)")
+	cmd.Flags().StringVar(&opts.Path, "path", "", "worktree path")
+	cmd.Flags().StringVar(&opts.Root, "root", "", "worktree root for default path resolution")
 	cmd.Flags().StringVar(&opts.From, "from", "", "start point for new branch (default: origin/HEAD or main)")
 	cmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "print what would be executed (no changes)")
 	return cmd
@@ -76,14 +78,9 @@ func createWorktreeFromList(ctx context.Context, d *deps, repoRoot string, branc
 		return "", usageError(fmt.Errorf("wt create: branch cannot be empty"))
 	}
 
-	branchPathPart, err := safeBranchPathPart(branch)
+	targetPath, err := resolveCreateTargetPath(ctx, d, repoRoot, branch, opts)
 	if err != nil {
-		return "", usageError(err)
-	}
-
-	targetPath := strings.TrimSpace(opts.Path)
-	if targetPath == "" {
-		targetPath = filepath.Join(repoRoot, ".wt", branchPathPart)
+		return "", err
 	}
 	for _, wt := range wts {
 		if wt.Branch == "refs/heads/"+branch && wt.Path != "" {
