@@ -3,6 +3,7 @@
 이 문서는 사용자에게 보이는 변경사항을 기록합니다. (README에는 패치 노트를 쓰지 않음)
 
 ## Unreleased
+- 2026-03-05: `wt remove --tui` 추가(`query` 없으면 전체 registered worktree 목록에서 선택, 다중 후보 query는 TUI picker로 확정, 선택 뒤에도 current/primary/prunable safety rule 유지, non-TTY에서는 명확한 에러 반환, confirm/`--dry-run`/`--force`/text·JSON 출력 규칙은 기존 `wt remove`와 일관되게 유지)
 - 2026-03-05: `wt path`/`wt create`의 create 정책을 registered worktree 기준으로 명확화. 일반 `wt path`는 계속 `git worktree list`의 registered path를 그대로 반환하고 filesystem scan을 하지 않으며, `wt path --create`/`wt create`는 로컬 브랜치만 있는 경우 기존 브랜치를 attach 하고, 동일 브랜치 또는 query에 대응되는 registered `prunable` entry가 있으면 자동 복구 대신 `wt prune --apply`를 안내하며 실패
 - 2026-03-05: `wt path --tui`와 공통 TUI picker 기반 추가(`query` 없으면 전체 worktree 선택, `query` 있으면 기존 매칭 규칙을 먼저 적용해 다중 후보일 때만 picker 표시, 단일 후보는 즉시 path-only 출력; 취소 시 exit code `130`; non-TTY에서는 실행 거부, 화면은 stderr에 렌더링)
 - 2026-03-05: `wt cleanup` 추가(`wt list`의 `recommendedAction`을 preview/apply로 연결, 기본 preview-only, `--apply`일 때만 prune/remove 실행, text/JSON 모두 remove 근거에서 로컬 git merged와 hosting merged를 계속 분리)

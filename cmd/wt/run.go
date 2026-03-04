@@ -130,6 +130,10 @@ func formatAmbiguousSelection(commandName string, query string, matches []worktr
 		b.WriteString("hint: use a more specific query, or resolve the path first with `wt path <query> --tui`")
 		return b.String()
 	}
+	if commandName == "wt remove" {
+		b.WriteString("hint: use a more specific query or rerun with --tui")
+		return b.String()
+	}
 	b.WriteString("hint: use a more specific query")
 	return b.String()
 }

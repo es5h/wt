@@ -120,9 +120,12 @@ repo-local git config 예시:
 
 ## Remove safety
 - `wt remove`는 정상 worktree를 의도적으로 제거하는 기능이다.
+- `wt remove --tui`는 선택 UX만 바꾸며, remove safety를 완화하지 않는다.
 - `--dry-run`은 항상 preview-only 이다.
 - `--force`는 확인 없이 즉시 제거하는 명시적 opt-in 이다.
 - interactive TTY에서만 확인 프롬프트 기반 제거를 허용하고, non-interactive 환경에서는 `--dry-run` 또는 `--force`를 요구한다.
+- `--tui`는 `stdin`과 `stderr` 모두 TTY일 때만 허용한다.
+- `query`가 없거나 다중 후보일 때만 picker를 사용하고, 선택 후에도 기존 safety 검사(current/primary/prunable)를 다시 적용한다.
 - primary worktree와 현재 실행 중인 worktree는 제거할 수 없다.
 - `prunable` entry는 `wt remove`가 아니라 `wt prune`로 정리한다.
 

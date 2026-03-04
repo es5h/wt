@@ -153,10 +153,13 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 - 둘 다 없으면: `git worktree add -b <branch> <path> <from>`
 - 동일 브랜치의 registered `prunable` entry가 남아 있으면 자동 생성/복구를 하지 않고 실패하며 `wt prune --apply`를 안내한다.
 
-## `wt remove <name>`
+## `wt remove [query]`
 목표: worktree를 제거한다.
 
 규칙:
+- `query`가 없으면 `--tui`가 필요하다.
+- `query`가 여러 후보와 매칭되면 기본 동작은 기존처럼 에러 + 후보 출력이다.
+- `query`가 없거나 다중 후보이고 `--tui`가 있으면 TUI picker로 대상을 고른다.
 - `--dry-run`이면 preview-only 이고 실제 변경을 하지 않는다.
 - `--force`이면 확인 없이 즉시 제거한다.
 - `--dry-run`/`--force`가 둘 다 없으면 interactive TTY에서만 확인 프롬프트를 보여준다.
@@ -165,16 +168,23 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 - 현재 실행 중인 worktree는 제거할 수 없다.
 - `prunable` entry는 `remove` 대상이 아니며, `wt prune --apply`를 사용해야 한다.
 - 브랜치 삭제는 기본 동작이 아니다(별도 옵션 없음).
+- `--tui`는 non-TTY 환경에서 사용할 수 없다.
+- `--tui`를 써도 safety rule은 완화되지 않는다. 선택 뒤에도 current/primary/prunable 검사는 동일하게 적용한다.
 
 옵션:
 - `--force`: 확인 생략
 - `--dry-run`
+- `--tui`: query 생략 또는 다중 후보 시 TUI 선택
 - `--json`: `{path, branch, action, removed}` 출력
 
 현재 구현 규칙:
+- `wt remove --tui`는 `wt path --tui`와 같은 공통 picker abstraction을 재사용한다.
+- `wt remove --tui`에서 `query`가 1개 후보로만 매칭되면 picker를 띄우지 않고 바로 그 대상을 사용한다.
+- `wt remove --tui`에서 `query`가 비어 있으면 현재 repo의 registered worktree 전체 목록을 picker에 넣는다.
 - interactive TTY에서는 stderr에 `Remove worktree <path> (<branch>)? [y/N]` 프롬프트를 출력하고, `y`/`yes`일 때만 삭제한다.
 - 실제 삭제는 내부적으로 `git worktree remove --force <path>`를 사용한다.
 - 기본 text 출력은 `would-remove` / `removed` 상태를 한 줄로 보여준다.
+- `--json` 출력 스키마와 기본 text 출력 포맷은 기존 `wt remove`와 동일하다.
 
 ## `wt prune`
 목표: stale/prunable worktree entry를 preview하거나 정리한다.
