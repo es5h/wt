@@ -28,10 +28,14 @@
 - `--verify-hosting`: 호스팅(PR/MR) 기준 merged 여부를 추가 검증
   - `--verify`와 배타적이지 않다. 둘을 함께 쓰면 로컬 git 검증과 호스팅 검증을 둘 다 표시한다.
   - `--verify-hosting`만 쓰면 호스팅 필드만 추가하고, `pathExists`/`dotGitExists`/`valid`/`mergedIntoBase`는 포함하지 않는다.
-  - 현재 범위(in-scope): GitHub만 지원 (`gh` CLI + `gh auth status` 필요)
-  - `gh` 탐색 순서: `WT_GH_BIN` > `PATH`
-  - 현재 범위(out-of-scope): GitLab API/`glab` 연동, 자동 로그인, 자동 fetch
-  - 실패 정책: `gh`가 없거나 인증이 없으면 명령 전체를 실패시키지 않고 텍스트 출력엔 note, JSON에는 `mergedViaHosting: null` + `hostingReason`으로 표현
+  - 현재 범위(in-scope): GitHub(`gh`) / GitLab(`glab`) 지원
+  - 바이너리 탐색 순서:
+    - GitHub: `WT_GH_BIN` > `PATH`
+    - GitLab: `WT_GLAB_BIN` > `PATH`
+  - GitHub는 `gh auth status` 후 merged PR(`number/title/url`)를 조회한다.
+  - GitLab은 `glab auth status` 후 `glab api projects/:fullpath/merge_requests?...`로 merged MR(`iid/title/web_url`)를 조회한다.
+  - 현재 범위(out-of-scope): 자동 로그인, 자동 브라우저 인증, 자동 fetch
+  - 실패 정책: `gh`/`glab`가 없거나 인증/조회에 실패해도 명령 전체를 실패시키지 않고 텍스트 출력엔 note, JSON에는 `mergedViaHosting: null` + `hostingReason`으로 표현
 
 현재 구현 상태:
 - 로컬 git 기준 `[merged]`는 `git merge-base --is-ancestor <branch> <base>` 의미를 유지한다.
@@ -39,7 +43,9 @@
   - 텍스트: `[merged-hosting:<provider>]`
   - JSON: `hostingProvider`, `hostingKind`, `mergedViaHosting`, `hostingReason`, `hostingChangeNumber`, `hostingChangeTitle`, `hostingChangeUrl`
 - provider 감지는 `origin` remote URL 기준 자동 감지다.
-- GitLab remote는 현재 `hostingProvider=gitlab`, `hostingKind=mr`, `mergedViaHosting=null`, `hostingReason=unsupported-provider`로 반환한다.
+<<<<<<< HEAD
+- GitLab remote는 merged MR이 확인되면 `hostingProvider=gitlab`, `hostingKind=mr`, `hostingChangeNumber`(MR IID), `hostingChangeTitle`, `hostingChangeUrl`를 채운다.
+- GitHub/GitLab 조회가 불가능하면 provider/kind는 유지하고 `mergedViaHosting=null`, `hostingReason`으로 degrade 한다.
 - 파생 신호는 기본 text/JSON에 항상 포함한다:
   - JSON: `current`, `primary`, `stale`, `recommendedAction`, `safeToRemove`
   - `recommendedAction`은 `prune`, `remove`, `none` 중 하나다.
@@ -47,6 +53,10 @@
   - `safeToRemove`는 `prunable`, `current`, `primary`, `detached`, `locked`, `missing-path`, `missing-git`가 아닌 항목 중 로컬 git merged 또는 hosting merged가 확인된 경우만 `true`다.
   - `recommendedAction=prune`은 stale/prunable 엔트리 정리 검토를 뜻한다.
   - `recommendedAction=remove`는 linked worktree 디렉토리 제거 검토를 뜻하며, 로컬 git merged와 hosting merged의 의미 차이는 기존 필드(`mergedIntoBase`, `mergedViaHosting`)로 계속 분리한다.
+=======
+- GitLab remote는 merged MR이 확인되면 `hostingProvider=gitlab`, `hostingKind=mr`, `hostingChangeNumber`(MR IID), `hostingChangeTitle`, `hostingChangeUrl`를 채운다.
+- GitHub/GitLab 조회가 불가능하면 provider/kind는 유지하고 `mergedViaHosting=null`, `hostingReason`으로 degrade 한다.
+>>>>>>> 4311044 (feat(list): add GitLab hosting verify support)
 
 `--json --verify` 출력 규칙:
 - 각 항목은 항상 `pathExists`, `dotGitExists`, `valid`, `mergedIntoBase`, `baseRef` 필드를 포함한다.

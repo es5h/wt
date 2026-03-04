@@ -108,7 +108,7 @@ func newListCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "structured JSON output")
 	cmd.Flags().BoolVar(&porcelain, "porcelain", false, "git porcelain output (for parsing)")
 	cmd.Flags().BoolVar(&verify, "verify", false, "verify worktree entries (checks path and merged-to-base)")
-	cmd.Flags().BoolVar(&verifyHosting, "verify-hosting", false, "opt-in hosting merge verification (GitHub via gh only; GitLab reserved)")
+	cmd.Flags().BoolVar(&verifyHosting, "verify-hosting", false, "opt-in hosting merge verification (GitHub via gh, GitLab via glab)")
 	cmd.Flags().StringVar(&baseRef, "base", "", "base ref for --verify (default: origin/HEAD or main)")
 	return cmd
 }
@@ -495,6 +495,12 @@ func formatHostingVerifyNote(wts []worktree.Worktree, d *deps, verifyCtx *listVe
 		switch info.HostingReason {
 		case "gh-auth-unavailable":
 			return "note: hosting verify skipped (gh not found on PATH / WT_GH_BIN, or not authenticated)"
+		case "glab-auth-unavailable":
+			return "note: hosting verify skipped (glab not found on PATH / WT_GLAB_BIN, or not authenticated)"
+		case "glab-mr-query-failed":
+			return "note: hosting verify skipped (glab MR query failed)"
+		case "gh-pr-query-failed":
+			return "note: hosting verify skipped (gh PR query failed)"
 		case "unsupported-provider":
 			if info.HostingProvider != "" && info.HostingProvider != string(hosting.ProviderUnknown) {
 				return fmt.Sprintf("note: hosting verify skipped (provider not implemented: %s)", info.HostingProvider)

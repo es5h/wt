@@ -764,9 +764,98 @@ branch refs/heads/feature-x
 	}
 }
 
-func TestList_VerifyHosting_JSONGitLabUnsupported(t *testing.T) {
-	t.Parallel()
+func TestList_VerifyHosting_JSONGitLabMergedMR(t *testing.T) {
+	const cwd = "/cwd"
+	const repo = "/repo"
+	const glabBin = "/mock/bin/glab"
+	t.Setenv("WT_GLAB_BIN", glabBin)
 
+	wtPath := filepath.Join(t.TempDir(), "feature-x")
+	if err := os.MkdirAll(filepath.Join(wtPath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create .git dir: %v", err)
+	}
+
+	porcelain := strings.TrimSpace(`
+worktree `+wtPath+`
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+`) + "\n"
+
+	cmd, stdout, stderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{Stdout: []byte("git@gitlab.com:team/wt.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    glabBin,
+					args:    []string{"auth", "status"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    glabBin,
+					args:    []string{"api", "projects/:fullpath/merge_requests?state=merged&source_branch=feature-x&per_page=1&order_by=updated_at&sort=desc&target_branch=main"},
+					res:     runner.Result{Stdout: []byte(`[{"iid":17,"title":"feature x","web_url":"https://gitlab.com/team/wt/-/merge_requests/17","merged_at":"2026-03-05T00:00:00Z"}]`), ExitCode: 0},
+				},
+			},
+		},
+		Cwd: cwd,
+	})
+
+	cmd.SetArgs([]string{"--json", "--verify-hosting", "--base", "main"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+
+	got := decodeJSONObjects(t, stdout.Bytes())
+	if got[0]["hostingProvider"] != "gitlab" {
+		t.Fatalf("hostingProvider = %#v, want gitlab", got[0]["hostingProvider"])
+	}
+	if got[0]["hostingKind"] != "mr" {
+		t.Fatalf("hostingKind = %#v, want mr", got[0]["hostingKind"])
+	}
+	if got[0]["mergedViaHosting"] != true {
+		t.Fatalf("mergedViaHosting = %#v, want true", got[0]["mergedViaHosting"])
+	}
+	if got[0]["hostingChangeNumber"] != float64(17) {
+		t.Fatalf("hostingChangeNumber = %#v, want 17", got[0]["hostingChangeNumber"])
+	}
+	if got[0]["hostingChangeTitle"] != "feature x" {
+		t.Fatalf("hostingChangeTitle = %#v, want feature x", got[0]["hostingChangeTitle"])
+	}
+	if got[0]["hostingChangeUrl"] != "https://gitlab.com/team/wt/-/merge_requests/17" {
+		t.Fatalf("hostingChangeUrl = %#v, want MR URL", got[0]["hostingChangeUrl"])
+	}
+}
+
+func TestList_VerifyHosting_JSONGitLabUnavailable(t *testing.T) {
 	const cwd = "/cwd"
 	const repo = "/repo"
 
@@ -780,6 +869,9 @@ worktree `+wtPath+`
 HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
 branch refs/heads/feature-x
 `) + "\n"
+
+	t.Setenv("WT_GLAB_BIN", "")
+	t.Setenv("PATH", "")
 
 	cmd, stdout, stderr := newListCmdWithDeps(t, &deps{
 		Runner: &fakeRunner{
@@ -838,8 +930,247 @@ branch refs/heads/feature-x
 	if got[0]["mergedViaHosting"] != nil {
 		t.Fatalf("mergedViaHosting = %#v, want nil", got[0]["mergedViaHosting"])
 	}
-	if got[0]["hostingReason"] != "unsupported-provider" {
-		t.Fatalf("hostingReason = %#v, want unsupported-provider", got[0]["hostingReason"])
+	if got[0]["hostingReason"] != "glab-auth-unavailable" {
+		t.Fatalf("hostingReason = %#v, want glab-auth-unavailable", got[0]["hostingReason"])
+	}
+}
+
+func TestList_VerifyHosting_JSONGitLabUnauthenticated(t *testing.T) {
+	const cwd = "/cwd"
+	const repo = "/repo"
+	const glabBin = "/mock/bin/glab"
+	t.Setenv("WT_GLAB_BIN", glabBin)
+
+	wtPath := filepath.Join(t.TempDir(), "feature-x")
+	if err := os.MkdirAll(filepath.Join(wtPath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create .git dir: %v", err)
+	}
+
+	porcelain := strings.TrimSpace(`
+worktree `+wtPath+`
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+`) + "\n"
+
+	cmd, stdout, stderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{Stdout: []byte("git@gitlab.com:team/wt.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    glabBin,
+					args:    []string{"auth", "status"},
+					res:     runner.Result{ExitCode: 1},
+					err:     errors.New("exit 1"),
+				},
+			},
+		},
+		Cwd: cwd,
+	})
+
+	cmd.SetArgs([]string{"--json", "--verify-hosting", "--base", "main"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+
+	got := decodeJSONObjects(t, stdout.Bytes())
+	if got[0]["hostingReason"] != "glab-auth-unavailable" {
+		t.Fatalf("hostingReason = %#v, want glab-auth-unavailable", got[0]["hostingReason"])
+	}
+}
+
+func TestList_VerifyHosting_JSONGitLabQueryFailureDegrades(t *testing.T) {
+	const cwd = "/cwd"
+	const repo = "/repo"
+	const glabBin = "/mock/bin/glab"
+	t.Setenv("WT_GLAB_BIN", glabBin)
+
+	wtPath := filepath.Join(t.TempDir(), "feature-x")
+	if err := os.MkdirAll(filepath.Join(wtPath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create .git dir: %v", err)
+	}
+
+	porcelain := strings.TrimSpace(`
+worktree `+wtPath+`
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+`) + "\n"
+
+	cmd, stdout, stderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{Stdout: []byte("git@gitlab.com:team/wt.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    glabBin,
+					args:    []string{"auth", "status"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    glabBin,
+					args:    []string{"api", "projects/:fullpath/merge_requests?state=merged&source_branch=feature-x&per_page=1&order_by=updated_at&sort=desc&target_branch=main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     errors.New("exit 1"),
+				},
+			},
+		},
+		Cwd: cwd,
+	})
+
+	cmd.SetArgs([]string{"--json", "--verify-hosting", "--base", "main"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+
+	got := decodeJSONObjects(t, stdout.Bytes())
+	if got[0]["mergedViaHosting"] != nil {
+		t.Fatalf("mergedViaHosting = %#v, want nil", got[0]["mergedViaHosting"])
+	}
+	if got[0]["hostingReason"] != "glab-mr-query-failed" {
+		t.Fatalf("hostingReason = %#v, want glab-mr-query-failed", got[0]["hostingReason"])
+	}
+}
+
+func TestList_VerifyHosting_TextShowsNoteWhenGitLabQueryFails(t *testing.T) {
+	const cwd = "/cwd"
+	const repo = "/repo"
+	const glabBin = "/mock/bin/glab"
+	t.Setenv("WT_GLAB_BIN", glabBin)
+
+	wtPath := filepath.Join(t.TempDir(), "feature-x")
+	if err := os.MkdirAll(filepath.Join(wtPath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create .git dir: %v", err)
+	}
+
+	porcelain := strings.TrimSpace(`
+worktree `+wtPath+`
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+`) + "\n"
+
+	cmd, stdout, stderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{Stdout: []byte("git@gitlab.com:team/wt.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    glabBin,
+					args:    []string{"auth", "status"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    glabBin,
+					args:    []string{"api", "projects/:fullpath/merge_requests?state=merged&source_branch=feature-x&per_page=1&order_by=updated_at&sort=desc&target_branch=main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     errors.New("exit 1"),
+				},
+				{
+					workDir: repo,
+					name:    glabBin,
+					args:    []string{"auth", "status"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    glabBin,
+					args:    []string{"api", "projects/:fullpath/merge_requests?state=merged&source_branch=feature-x&per_page=1&order_by=updated_at&sort=desc&target_branch=main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     errors.New("exit 1"),
+				},
+			},
+		},
+		Cwd: cwd,
+	})
+
+	cmd.SetArgs([]string{"--verify-hosting", "--base", "main"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if !strings.Contains(stderr.String(), "note: hosting verify skipped (glab MR query failed)") {
+		t.Fatalf("stderr = %q, want glab MR query failure note", stderr.String())
+	}
+	if stdout.Len() == 0 {
+		t.Fatalf("stdout = empty, want list output")
 	}
 }
 

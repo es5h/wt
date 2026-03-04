@@ -9,7 +9,7 @@
 - 2026-03-05: `wt list`에 `stale`, `recommendedAction`, `safeToRemove`, `current`, `primary` 파생 신호 추가(text/JSON 공통). `prunable`, 로컬 git merged, hosting merged를 계속 분리해 보여주고, detached/current/primary/missing-path 예외는 자동 `remove` 추천에서 제외
 - 2026-03-05: `wt prune` 추가(기본 preview-only, `--apply`일 때만 `git worktree prune --expire now` 실행, stale/prunable entry 정리용)
 - 2026-03-05: breaking: `wt goto`를 제거하고 `wt path`를 정식 경로 선택 명령으로 사용하도록 정리(하위 호환 alias 없음)
-- 2026-03-05: `wt list --verify-hosting` 추가(GitHub `gh` 기반 opt-in; `[merged-hosting:<provider>]`/`mergedViaHosting`로 로컬 git `[merged]`와 의미 분리, `hostingChangeNumber`/`hostingChangeTitle`/`hostingChangeUrl` 제공, GitLab은 현재 감지만 지원)
+- 2026-03-05: `wt list --verify-hosting`가 GitLab `glab` 기반 merged MR 조회를 지원하도록 확장(`WT_GLAB_BIN` > `PATH`, 자동 로그인 없음, 실패 시 text note / JSON `mergedViaHosting: null` + `hostingReason`으로 degrade, `hostingChangeNumber`/`hostingChangeTitle`/`hostingChangeUrl`를 GitHub와 동일 스키마로 제공)
 - 2026-03-05: `wt run <query> -- <cmd...>` 추가(`wt path`와 같은 매칭 규칙 사용, 종료 코드 보존, `--json` 지원)
 - 2026-03-05: `wt create`와 `wt path --create`가 동일한 worktree root 오버라이드 정책을 공유하도록 리팩터링 (`--root` > `WT_ROOT` > repo-local git config `wt.root` > `<repo>/.wt`)
 - 2026-03-05: `wt list --json --verify` 출력 스키마를 고정해 `pathExists`, `dotGitExists`, `valid`, `mergedIntoBase`, `baseRef`를 항상 포함하도록 조정하고, detached/branch 없음 케이스의 `mergedIntoBase`를 `null`로 명시
