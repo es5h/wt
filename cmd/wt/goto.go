@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -18,6 +19,8 @@ func newGotoCmd() *cobra.Command {
 	var create bool
 	var tui bool
 	var noTui bool
+	var createPath string
+	var createFrom string
 
 	cmd := &cobra.Command{
 		Use:   "goto <query>",
@@ -31,9 +34,6 @@ func newGotoCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if tui {
 				return usageError(fmt.Errorf("wt goto: --tui is not implemented yet"))
-			}
-			if create {
-				return usageError(fmt.Errorf("wt goto: --create is not implemented yet"))
 			}
 			_ = noTui
 
@@ -60,7 +60,26 @@ func newGotoCmd() *cobra.Command {
 
 			matches := matchWorktrees(wts, query)
 			if len(matches) == 0 {
-				return &exitError{Code: 1, Err: fmt.Errorf("wt goto: no matches for %q", query)}
+				if !create {
+					return &exitError{Code: 1, Err: fmt.Errorf("wt goto: no matches for %q", query)}
+				}
+
+				branch := query
+				if strings.TrimSpace(createFrom) == "" {
+					if after, ok := strings.CutPrefix(branch, "origin/"); ok && strings.TrimSpace(after) != "" {
+						branch = after
+					}
+				}
+
+				path, err := createWorktreeFromList(ctx, d, repoRoot, branch, createOpts{
+					Path: createPath,
+					From: createFrom,
+				}, wts)
+				if err != nil {
+					return err
+				}
+				fmt.Fprintln(cmd.OutOrStdout(), path)
+				return nil
 			}
 			if len(matches) > 1 {
 				return &exitError{Code: 1, Err: fmt.Errorf("%s", formatAmbiguousGoto(query, matches))}
@@ -87,9 +106,11 @@ func newGotoCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "structured JSON output")
-	cmd.Flags().BoolVar(&create, "create", false, "create worktree if missing (not implemented yet)")
+	cmd.Flags().BoolVar(&create, "create", false, "create worktree if missing")
 	cmd.Flags().BoolVar(&tui, "tui", false, "use TUI selection (not implemented yet)")
 	cmd.Flags().BoolVar(&noTui, "no-tui", false, "disable TUI selection (reserved)")
+	cmd.Flags().StringVar(&createPath, "path", "", "worktree path for --create (default: <repo>/.wt/<branch>)")
+	cmd.Flags().StringVar(&createFrom, "from", "", "start point for --create (default: origin/<branch> if exists, else origin/HEAD or main)")
 
 	return cmd
 }
@@ -130,6 +151,17 @@ func completeGotoQuery(cmd *cobra.Command, args []string, toComplete string) ([]
 		base := filepath.Base(wt.Path)
 		if base != "" {
 			uniq[base] = struct{}{}
+		}
+	}
+
+	if os.Getenv("WT_GOTO_COMPLETE_REMOTE") == "1" {
+		branches, err := git.RemoteBranches(ctx, d.Runner, repoRoot, "origin")
+		if err == nil {
+			for _, b := range branches {
+				if b != "" {
+					uniq[b] = struct{}{}
+				}
+			}
 		}
 	}
 
