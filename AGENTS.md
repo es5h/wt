@@ -29,6 +29,7 @@
 - 테스트: `make test`
 - 빌드: `make build`
 - 실행: `make run ARGS="--help"`
+- PR 생성(선택): `make pr-create` (필요 시 `gh auth login` 먼저)
 
 ## Docs hygiene
 - 사용자에게 보이는 동작(명령/옵션/출력)이 바뀌면:
@@ -66,3 +67,6 @@
 - 사용자에게 보이는 변경(명령/옵션/출력/기본값)이 포함되면:
   - `VERSION` bump 여부를 판단하고 반영한다.
   - `docs/release/notes.md`의 `Unreleased`에 변경사항을 추가한다.
+
+## PR guidelines
+- PR 작성 가이드: `docs/pr-guidelines.md`

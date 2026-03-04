@@ -1,4 +1,3 @@
 .cache/
-wt
-wt.exe
-
+/wt
+/wt.exe
