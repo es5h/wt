@@ -2,17 +2,11 @@
 
 이 파일은 `wt` 레포에서 자동화 코딩 에이전트가 일관되고 안전하게 작업하기 위한 로컬 규칙/런북입니다.
 
-## Project
+## Scope
 - 목적: `git worktree`를 더 쉽게 쓰기 위한 CLI 헬퍼
-- 핵심 UX:
-  - `wt list`: 현재 Git 컨텍스트의 worktree 목록
-  - `wt goto <name>`: worktree 선택(이름/브랜치/부분매칭) → **경로를 stdout으로 출력**
-  - `wt goto <name> --create`: 없으면 worktree 생성 후 경로 출력
-  - (추가) `wt create`, `wt remove`, `wt prune`, `wt init <shell>`
-
-## Non-goals (명시적으로 안 하는 것)
-- Git 자체를 대체하는 복잡한 UI/대규모 설정 시스템
-- 사용자의 로컬 환경을 파괴할 수 있는 기본 동작(삭제/초기화 등)은 반드시 opt-in
+- Non-goals:
+  - Git 자체를 대체하는 복잡한 UI/대규모 설정 시스템
+  - 사용자의 로컬 환경을 파괴할 수 있는 기본 동작(삭제/초기화 등)은 반드시 opt-in
 
 ## Repo layout
 - 현재: `main.go` (임시/스캐폴딩)
@@ -27,10 +21,19 @@
 - 의존성: 꼭 필요할 때만 추가. CLI 프레임워크를 쓰면 `cobra` 또는 `urfave/cli` 중 하나로 통일(혼용 금지).
 
 ## Common commands
-- 빌드: `go build ./...`
-- 실행(현 구조): `go run . --help`
-- 실행(권장 구조): `go run ./cmd/wt --help`
-- 테스트: `go test ./...`
+- 포맷(수정): `make fmt`
+- 포맷(검증): `make fmt-check`
+- 자동 수정(Go 1.26+): `make fix` (파일을 수정함)
+- 자동 수정(diff): `make fix-diff` (파일을 수정하지 않음)
+- 필수 체크: `make check` (현재 작업트리 기준)
+- 테스트: `make test`
+- 빌드: `make build`
+- 실행: `make run ARGS="--help"`
+
+## Docs hygiene
+- 사용자에게 보이는 동작(명령/옵션/출력)이 바뀌면:
+  - 스펙은 `docs/`에 반영하고
+  - 요약은 `docs/release/notes.md`에 날짜와 함께 추가한다.
 
 ## Output/UX rules
 - `wt goto ...` 계열은 셸에서 `cd "$(wt goto ...)"`가 가능하도록 **경로만** 출력하는 모드를 기본으로 유지한다.
@@ -46,16 +49,20 @@
   - 대상(worktree path, branch)을 명확히 출력
   - 기본적으로 확인(confirmation) 또는 드라이런(`--dry-run`) 지원을 고려
 
-## Worktree policy (초안)
-- “Git 컨텍스트”는 현재 디렉토리에서 `git rev-parse --show-toplevel`로 결정한다.
-- 기본 worktree 루트 경로 정책은 한 가지로 고정하고 문서화한다(예: repo 상위 `../.wt/<repo>/...`).
-- 브랜치명 → 폴더명 정규화 규칙(`/` → `-`, 공백/특수문자 처리, 충돌 시 suffix)을 유틸로 통일한다.
-
-## Shell integration
-- `wt goto`는 프로세스가 직접 `cd`할 수 없으므로, `wt init zsh|bash|fish`가 셸 함수/alias를 출력하는 방식으로 통합한다.
-- 셸 스크립트는 가능한 한 idempotent(중복 적용해도 안전)하게 만든다.
-
 ## Specs (docs)
-- CLI/옵션 스펙(초안): `docs/cli.md`
-- 셸 통합/완성(초안): `docs/shell-completion.md`
-- TUI 스펙(초안): `docs/tui.md`
+- CLI/옵션 스펙(초안): `docs/spec/cli.md`
+- 정책(초안): `docs/policy/worktree.md`
+- 셸 통합/완성(초안): `docs/ux/shell.md`
+- TUI 스펙(초안): `docs/ux/tui.md`
+- 로드맵: `docs/roadmap/README.md`
+- 릴리즈 노트: `docs/release/notes.md`
+
+## Versioning
+- 버전은 `VERSION`에서 관리한다(semver: `MAJOR.MINOR.PATCH`).
+- 사용자에게 보이는 변경이 있으면 `docs/release/notes.md`의 `Unreleased`에 먼저 기록한다.
+
+## Merge gate (to main)
+- main에 머지(또는 PR ready) 전에 `make premerge`를 통과시킨다.
+- 사용자에게 보이는 변경(명령/옵션/출력/기본값)이 포함되면:
+  - `VERSION` bump 여부를 판단하고 반영한다.
+  - `docs/release/notes.md`의 `Unreleased`에 변경사항을 추가한다.

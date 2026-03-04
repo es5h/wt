@@ -1,22 +1,4 @@
-# Go build artifacts
-*.exe
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-coverage*.out
-
-# Local binaries / build output
-/wt
-/wt.exe
-/bin/
-/dist/
-
-# IDE/editor
-/.idea/
-/.vscode/
-
-# OS
-.DS_Store
+.cache/
+wt
+wt.exe
 

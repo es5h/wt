@@ -1,8 +1,7 @@
 # Shell integration & completion (draft)
 
 ## Why
-- `wt goto`는 프로세스가 직접 `cd`를 할 수 없으므로, “경로 출력 + 셸 함수” 방식이 필요하다.
-- `wt goto <TAB>` 같은 completion은 UX 핵심이라 문서/스펙을 먼저 고정한다.
+- `wt init`/completion 동작을 문서화한다. (관련 CLI 스펙: `docs/spec/cli.md`)
 
 ## `wt init <shell>`
 목표: `cd "$(wt goto ...)"`를 래핑하는 함수를 제공한다.
@@ -17,12 +16,12 @@
   - `function wtg; cd (wt goto $argv); or return; end`
 
 추가(초안):
-- `wt init zsh --completion` 같은 방식으로 completion까지 같이 설치할지 여부는 추후 결정
+- completion 설치 UX를 `wt init`에 포함할지 여부는 추후 결정(로드맵: `docs/roadmap/README.md`)
 
 ## Completion 설계(초안)
 
 ### 커맨드 형태
-- `wt completion <shell>`: 해당 셸용 completion 스크립트를 stdout으로 출력
+- (계획) `wt completion <shell>`: 해당 셸용 completion 스크립트를 stdout으로 출력 (로드맵: `docs/roadmap/README.md`)
 
 ### 후보 생성 규칙
 - completion은 “빠르고 부작용이 없어야” 한다.
@@ -35,4 +34,3 @@
 
 ## Notes
 - completion은 터미널 기능이라 테스트는 “생성된 스크립트 문자열” 수준의 스냅샷 테스트로 시작하는 것을 권장한다.
-

@@ -10,6 +10,8 @@
 비활성 조건(초안):
 - `stdout` 또는 `stdin`이 터미널이 아니면(파이프/CI) TUI 실행 금지(에러 또는 `--no-tui` 동작)
 
+관련 CLI 스펙은 `docs/spec/cli.md` 참고.
+
 ## UI layout (초안)
 - 상단: 입력(query) / 상태 라인
 - 본문: 후보 리스트(이름/브랜치, 경로, 짧은 해시, locked 표시)
@@ -32,7 +34,6 @@
 - stderr: 취소 메시지(선택)
 - exit code: 130(CTRL+C 관례) 또는 1(정책 확정 필요)
 
-## Implementation note (Go 학습용)
+## Implementation note
 - TUI는 도메인 로직과 분리(리스트/필터/선택 상태는 순수 구조체로)
-- 초기에는 TUI 라이브러리 없이도 구현 가능하지만, 커지면 `bubbletea` 같은 라이브러리를 고려
-
+- TUI 도입시 `bubbletea` 사용

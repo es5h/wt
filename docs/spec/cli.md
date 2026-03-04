@@ -3,9 +3,10 @@
 이 문서는 `wt`의 명령/옵션 동작을 “테스트 가능한 규칙” 수준으로 고정하기 위한 초안입니다.
 
 ## Global rules
-- Git 컨텍스트(repo root)는 현재 디렉토리에서 `git rev-parse --show-toplevel`로 결정한다.
+- Git 컨텍스트(repo root)는 현재 디렉토리에서 `git rev-parse --show-toplevel`로 결정한다. (정책: `docs/policy/worktree.md`)
 - 정상 출력은 stdout, 에러는 stderr.
 - 사람이 읽는 출력과 스크립트 출력이 충돌하면 `--json` 또는 `--porcelain`로 분리한다.
+- 경로 정책/오버라이드(환경변수, git config 등)는 `docs/policy/worktree.md`에 정의한다.
 
 ## `wt list`
 목표: 현재 repo의 worktree를 나열한다.
@@ -25,7 +26,9 @@
 - 후보가 0개면 non-zero exit + stderr에 후보/가이드 출력.
 - 후보가 1개면 자동 선택.
 - 후보가 2개 이상이면:
-  - 기본은 TUI/interactive 여부에 따라 다르게 동작(아래 참고)
+  - 기본 동작은 정책 확정 전(로드맵: `docs/roadmap/README.md`)
+  - `--tui`가 있으면 TUI로 선택(스펙: `docs/ux/tui.md`)
+  - `--no-tui`가 있으면 에러(스크립트 안전)
 
 옵션(초안):
 - `--create`: query에 해당하는 브랜치 worktree가 없으면 생성
@@ -33,9 +36,7 @@
 - `--no-tui`: 후보가 여러 개면 에러(스크립트 안전)
 - `--json`: 선택 결과를 json으로 출력(예: `{path, branch, reason}`)
 
-TUI 기본 동작(초안):
-- 터미널이면 `wt goto`(query 생략) 시 TUI를 기본으로 고려
-- 파이프/리다이렉트(`stdout`이 터미널이 아님)면 TUI를 자동 비활성화
+TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 
 ## `wt create <branch>`
 목표: `<branch>`에 대한 worktree를 생성한다.
@@ -64,3 +65,4 @@ TUI 기본 동작(초안):
 예시(개념):
 - `wt init zsh` → stdout에 function 정의를 출력(사용자가 rc에 추가)
 
+셸 통합/완성 관련 상세는 `docs/ux/shell.md` 참고.
