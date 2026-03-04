@@ -1,120 +1,119 @@
-# Shell integration & completion (draft)
+# Shell integration and completion
 
-## Why
-- `wt init`/completion 동작을 문서화한다. (관련 CLI 스펙: `docs/spec/cli.md`)
+이 문서는 현재 구현된 셸 helper와 completion 사용 흐름을 설명한다.
 
-## Low-level completion (recommended)
-초기에는 “가볍고 안전한” 자동완성을 권장합니다. (서브커맨드/플래그 중심)
+## Recommended Flow
 
-`cobra` 기반 CLI는 `wt completion <shell>`을 기본 제공하므로, 이를 그대로 사용합니다.
+1. `wt`를 설치한다.
+2. `wt init <shell>` 출력으로 helper를 셸에 추가한다.
+3. 필요하면 `wt completion <shell>`을 설치해 자동완성을 켠다.
 
-### 먼저 확인(진단)
-아래가 `"_wt not found"`이면 현재는 `wt` 전용 completion이 “설치/로딩”되어 있지 않은 상태입니다. (이 경우 `wt<TAB>`에서 파일명이 나오는 것은 zsh 기본 파일명 completion입니다.)
+예시:
 
 ```sh
-whence -v _wt || true
+eval "$(wt init zsh)"
 ```
 
-### 동적 후보(현재 구현)
-`wt path <query>`의 `<query>` 위치에서는, 현재 레포의 `git worktree list --porcelain` 결과를 기반으로 **기존 worktree 브랜치 이름**을 자동완성 후보로 제공합니다.
+## `wt init <shell>`
 
-- 안전성: 읽기 전용(`git worktree list`)만 호출
-- 성능: 짧은 git 호출 1회 수준
-- 기본 후보는 “이미 존재하는 worktree 브랜치”에 한정됩니다.
+`wt init`은 rc 파일을 직접 수정하지 않고 helper 정의만 `stdout`으로 출력한다.
 
-추가(옵트인):
-- 원격 브랜치 후보까지 포함하고 싶으면 환경변수 `WT_PATH_COMPLETE_REMOTE=1`을 설정합니다.
-- 이 경우에도 `git fetch`는 자동으로 하지 않으며, 로컬에 존재하는 `refs/remotes/origin/*`만 사용합니다.
+현재 포함되는 helper:
 
-### zsh 설치(옵트인)
+- `wtr()`: `cd "$(wt root)" || return`
+- `wtg()`: `cd "$(wt path "$@")" || return`
+- `wcd()`: `cd "$(wt path "$@")" || return`
+
+의미:
+
+- `wtr`: 현재 Git 컨텍스트의 primary repo root로 이동
+- `wtg`: query로 worktree를 찾아 이동
+- `wcd`: `wtg`와 동일 동작의 별칭 helper
+
+## zsh
+
+helper 적용:
+
+```sh
+eval "$(wt init zsh)"
+```
+
+영구 적용:
+
+```sh
+wt init zsh >> ~/.zshrc
+```
+
+`wt init zsh`에는 completion bridge가 포함된다. `_wt` completion이 설치되어 있으면 `wtg <TAB>`와 `wcd <TAB>`가 `wt path <TAB>`처럼 동작한다.
+
+## bash
+
+```sh
+eval "$(wt init bash)"
+```
+
+## fish
+
+```sh
+wt init fish | source
+```
+
+## Completion
+
+`wt`는 Cobra 기본 `wt completion <shell>` 명령을 제공한다.
+
+zsh 설치:
+
 ```sh
 mkdir -p ~/.zsh/completions
 wt completion zsh > ~/.zsh/completions/_wt
+```
 
-# ~/.zshrc에 아래가 없다면 추가
+`~/.zshrc` 예시:
+
+```sh
 fpath=(~/.zsh/completions $fpath)
 autoload -Uz compinit && compinit
 ```
 
-#### oh-my-zsh 사용 시(권장)
-oh-my-zsh를 쓰면 기본적으로 `~/.oh-my-zsh/custom/completions`가 `fpath`에 들어가 있으니, 아래가 가장 간단합니다.
+bash 설치:
 
 ```sh
-mkdir -p ~/.oh-my-zsh/custom/completions
-wt completion zsh > ~/.oh-my-zsh/custom/completions/_wt
-
-rm -f ~/.zcompdump*
-autoload -Uz compinit && compinit
-
-whence -v _wt
-```
-
-### bash 설치(옵트인)
-```sh
+mkdir -p ~/.bash_completion.d
 wt completion bash > ~/.bash_completion.d/wt
-source ~/.bash_completion.d/wt
 ```
 
-### fish 설치(옵트인)
+fish 설치:
+
 ```sh
 mkdir -p ~/.config/fish/completions
 wt completion fish > ~/.config/fish/completions/wt.fish
 ```
 
-## `wt init <shell>`
-목표: `wt root`/`wt path`의 path-only 출력을 `cd`와 연결하는 함수를 제공한다.
+## `wt path` Query Completion
 
-권장 UX(초안):
-- 사용자는 아래 중 하나로 rc 파일에 추가한다.
+현재 동적 후보는 `git worktree list --porcelain`에 등록된 worktree 기준이다.
 
-예시(컨셉, 스펙 확정 전):
-- zsh/bash:
-  - `wtr() { cd "$(wt root)" || return; }`
-  - `wtg() { cd "$(wt path "$@")" || return; }`
-  - `wcd() { cd "$(wt path "$@")" || return; }`
-- fish:
-  - `function wtr; cd (wt root); or return; end`
-  - `function wtg; cd (wt path $argv); or return; end`
-  - `function wcd; cd (wt path $argv); or return; end`
+- linked worktree가 있는 브랜치명은 completion 후보에 포함된다.
+- detached entry는 basename 기반으로 후보가 잡힐 수 있다.
+- 기본값은 현재 등록된 worktree 후보만 제안한다.
 
-### 사용(추천)
+원격 브랜치 후보를 추가하고 싶으면:
+
 ```sh
-wt init zsh
+export WT_PATH_COMPLETE_REMOTE=1
 ```
 
-또는(즉시 적용, opt-in):
+이 경우에도 자동 `git fetch`는 하지 않는다. 로컬에 이미 존재하는 `refs/remotes/origin/*`만 사용한다.
+
+## Troubleshooting
+
+`wtg`나 `wcd`에서 탭이 파일명 완성으로만 동작하면 `_wt`가 로드되지 않은 상태일 가능성이 높다.
+
+진단:
+
 ```sh
-eval "$(wt init zsh)"
+whence -v _wt || true
 ```
 
-### 포함되는 helper
-- `wtr`: 현재 Git 컨텍스트의 repo root로 이동한다. 내부적으로 `wt root`만 호출하므로 stdout path-only 정책을 유지한다.
-- `wtg`: `wt path`로 선택된 worktree로 이동한다.
-- `wcd`: `wtg`와 동일 동작의 추가 이름이다. 두 함수 모두 바이너리 자체가 `cd`하지 않고, 셸이 stdout path를 받아 이동한다.
-
-#### `wtg`/`wcd` 자동완성(zsh)
-`wt`의 zsh completion(`_wt`)을 설치했다면, `wt init zsh` 출력에는 `wtg <TAB>`와 `wcd <TAB>`가 모두 `wt path <TAB>`처럼 동작하도록 “completion bridge”도 포함됩니다.
-
-만약 `wtg`/`wcd` 탭이 파일명 완성으로만 동작하면:
-- `_wt` 설치/로딩 여부를 확인: `whence -v _wt`
-- completion 설치: 위 “zsh 설치(옵트인)” 섹션 참고
-
-추가(초안):
-- completion 설치 UX를 `wt init`에 포함할지 여부는 추후 결정(로드맵: `docs/roadmap/README.md`)
-
-## Completion 설계(초안)
-
-### 커맨드 형태
-- (계획) `wt completion <shell>`: 해당 셸용 completion 스크립트를 stdout으로 출력 (로드맵: `docs/roadmap/README.md`)
-
-### 후보 생성 규칙
-- completion은 “빠르고 부작용이 없어야” 한다.
-- 후보 목록은 기본적으로 `wt list --porcelain` 또는 `wt list --json`을 기반으로 생성한다.
-
-### 설치(문서화만)
-- zsh: `~/.zshrc`에서 `source <(wt completion zsh)` 형태를 지원 고려
-- bash: `source <(wt completion bash)`
-- fish: 출력 파일을 `~/.config/fish/completions/wt.fish`로 저장
-
-## Notes
-- completion은 터미널 기능이라 테스트는 “생성된 스크립트 문자열” 수준의 스냅샷 테스트로 시작하는 것을 권장한다.
+`_wt not found`면 completion을 먼저 설치해야 한다.

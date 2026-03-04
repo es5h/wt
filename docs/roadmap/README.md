@@ -1,23 +1,36 @@
-# Roadmap (draft)
+# Roadmap
 
-이 문서는 `wt`의 “미구현 기능/아이디어/우선순위”를 기록합니다. 현재 스펙/정책은 아래 문서를 우선합니다.
-- 사용자 스펙: `docs/spec/cli.md`
-- 정책: `docs/policy/worktree.md`
-- 개발/에이전트 런북: `AGENTS.md`
+이 문서는 현재 구현 상태를 기준으로, 이미 완료된 범위와 다음 현실적 작업 순서를 구분해 기록한다.
 
-## Milestones (idea)
-- M0 Core: `list`, `path` 기본 UX + 안정적 출력 포맷
-- M1 Create/Remove: `path --create`, `create`, `remove`, `prune` (안전장치 포함)
-- M2 Shell: `init <shell>` + completion 스크립트
-- M3 TUI: `path` TUI picker
+## Already Shipped
 
-버전(semver)은 로드맵이 아니라 `VERSION` + `docs/release/notes.md`에서만 관리한다.
+- Core listing: `wt list`, `--json`, `--porcelain`, `--verify`, `--verify-hosting`
+- Path selection: `wt path`, `--json`, `--create`, `--tui`, `--no-tui`
+- Root and execution: `wt root`, `wt run`
+- Worktree lifecycle: `wt create`, `wt remove`, `wt prune`, `wt cleanup`
+- Shell integration: `wt init <shell>`, `wtg`, `wcd`, `wtr`, `wt completion <shell>`
+- TUI flows: reusable picker core, `wt path --tui`, `wt remove --tui`, `wt prune --tui`
+- Hosting integration: GitHub PR / GitLab MR merged verification
 
-## Open questions
-- completion 설치 UX를 `wt init`에 포함할지, 별도 `wt completion <shell>`로 분리할지
-- `wt path` 다중 후보 시 기본 동작(TUI 자동 vs 에러 vs 프롬프트)
-- TUI 취소 시 exit code(130 vs 1) 정책
+## Next Likely Work
 
-## Dependencies / implementation choices
-- CLI 프레임워크를 쓸 경우 `cobra` 통일(혼용 금지)
-- TUI는 초기엔 최소 구현, 필요 시 `bubbletea` 계열 검토
+현재 구조와 최근 머지 흐름을 기준으로 보면 다음 순서가 가장 자연스럽다.
+
+1. `wt create` / `wt path --create` 경로 preflight 검증
+현재는 최종 경로가 파일인지, 디렉터리인지, 비어있는지 여부를 사전에 검사하지 않고 `git worktree add` 실패에 의존한다. 생성 전에 명시적으로 검증해 더 빠르고 일관된 에러 메시지를 제공하는 후속 작업이 필요하다.
+
+2. Shell/completion 설치 UX 정리
+현재는 `wt completion <shell>`과 `wt init <shell>`이 모두 존재하지만 설치는 전부 수동이다. 설치 스크립트와 문서에서 opt-in 설치 경로를 더 분명히 하거나, 안전한 범위의 helper 명령을 추가하는 작업이 다음 단계로 적합하다.
+
+3. Cleanup selection ergonomics
+`wt cleanup`는 이미 추천 신호와 실행 엔진을 갖고 있지만 현재는 일괄 preview/apply 중심이다. 지금 있는 `list` 파생 신호와 TUI picker를 재사용해 선택적 review/apply 흐름을 붙이는 것이 현실적인 확장이다.
+
+4. Structured output consistency hardening
+`list`, `path`, `run`, `remove`, `prune`, `cleanup`에 JSON이 이미 존재한다. 스크립트 사용성을 높이려면 명령 간 action/reason/exit code 표현을 더 일관되게 다듬는 후속 작업이 자연스럽다.
+
+## Not Current Scope
+
+- Git 자체를 대체하는 대규모 UI
+- 자동 로그인, 자동 fetch, 자동 브라우저 인증
+- 사용자의 rc 파일이나 로컬 환경을 기본값으로 자동 수정하는 설치 방식
+- 기본값이 파괴적인 remove/prune/reset 류 동작
