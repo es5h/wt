@@ -74,3 +74,9 @@ repo-local git config 예시:
 - `wt prune`는 stale/prunable entry 정리 전용이다.
 - 기본 동작은 preview-only 이어야 하며, 실제 변경은 명시적 opt-in(`--apply`)일 때만 수행한다.
 - 실제 prune은 `git worktree prune --expire now`로 제한하고, 정상 worktree 디렉토리를 직접 삭제하지 않는다.
+
+## Remove safety
+- `wt remove`는 정상 worktree를 의도적으로 제거하는 기능이다.
+- 기본 동작은 preview-only(`--dry-run`)이며, 실제 변경은 명시적 opt-in(`--force`)일 때만 수행한다.
+- primary worktree와 현재 실행 중인 worktree는 제거할 수 없다.
+- `prunable` entry는 `wt remove`가 아니라 `wt prune`로 정리한다.
