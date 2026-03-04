@@ -13,6 +13,12 @@
 
 출력(기본):
 - 각 worktree의 `path`, 연결된 `branch`(있으면), `HEAD`(짧은 해시), `locked` 여부를 표시
+- 파생 신호가 있으면 짧은 마커로 함께 표시한다.
+  - `current`, `primary`: 현재 worktree / primary worktree
+  - `missing-path`, `missing-git`, `stale`: 엔트리 이상 징후
+  - `merged`: 로컬 git 기준 base ref로 merge됨 (`git merge-base --is-ancestor`)
+  - `merged-hosting:<provider>`: hosting(PR/MR) 기준 merge됨
+  - `safe-remove`, `recommend:remove|prune`: 검토 추천 신호
 
 옵션(초안):
 - `--json`: 구조화 출력
@@ -34,6 +40,13 @@
   - JSON: `hostingProvider`, `hostingKind`, `mergedViaHosting`, `hostingReason`, `hostingChangeNumber`, `hostingChangeTitle`, `hostingChangeUrl`
 - provider 감지는 `origin` remote URL 기준 자동 감지다.
 - GitLab remote는 현재 `hostingProvider=gitlab`, `hostingKind=mr`, `mergedViaHosting=null`, `hostingReason=unsupported-provider`로 반환한다.
+- 파생 신호는 기본 text/JSON에 항상 포함한다:
+  - JSON: `current`, `primary`, `stale`, `recommendedAction`, `safeToRemove`
+  - `recommendedAction`은 `prune`, `remove`, `none` 중 하나다.
+  - `stale`은 `prunable` 이거나 worktree `path`/`.git`가 누락된 경우 `true`다.
+  - `safeToRemove`는 `prunable`, `current`, `primary`, `detached`, `locked`, `missing-path`, `missing-git`가 아닌 항목 중 로컬 git merged 또는 hosting merged가 확인된 경우만 `true`다.
+  - `recommendedAction=prune`은 stale/prunable 엔트리 정리 검토를 뜻한다.
+  - `recommendedAction=remove`는 linked worktree 디렉토리 제거 검토를 뜻하며, 로컬 git merged와 hosting merged의 의미 차이는 기존 필드(`mergedIntoBase`, `mergedViaHosting`)로 계속 분리한다.
 
 `--json --verify` 출력 규칙:
 - 각 항목은 항상 `pathExists`, `dotGitExists`, `valid`, `mergedIntoBase`, `baseRef` 필드를 포함한다.
@@ -42,6 +55,7 @@
   - 예: detached worktree
   - 예: branch 정보가 없는 entry
 - `baseRef`는 `--verify`가 켜진 JSON 출력에서 항상 문자열로 포함된다.
+- `current`, `primary`, `stale`, `recommendedAction`, `safeToRemove`는 `--verify` 여부와 무관하게 항상 포함된다.
 
 ## `wt path [query]`
 목표: query로 worktree를 선택하고 “경로”를 stdout으로 출력한다.

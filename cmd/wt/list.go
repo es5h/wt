@@ -60,6 +60,7 @@ func newListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			paths := resolveListPaths(ctx, d, repoRoot)
 
 			var verifyCtx *listVerifyContext
 			if verify || verifyHosting {
@@ -88,7 +89,7 @@ func newListCmd() *cobra.Command {
 			if jsonOut {
 				enc := json.NewEncoder(cmd.OutOrStdout())
 				enc.SetIndent("", "  ")
-				return enc.Encode(toJSONWorktrees(cmd, d, wts, verifyCtx))
+				return enc.Encode(toJSONWorktrees(cmd, d, wts, verifyCtx, paths))
 			}
 
 			hostingNote := formatHostingVerifyNote(wts, d, verifyCtx)
@@ -98,7 +99,7 @@ func newListCmd() *cobra.Command {
 
 			for _, wt := range wts {
 				info, _ := verifyWorktree(cmd, d, verifyCtx, wt)
-				fmt.Fprintln(cmd.OutOrStdout(), formatWorktreeLine(wt, info))
+				fmt.Fprintln(cmd.OutOrStdout(), formatWorktreeLine(wt, info, deriveListSignals(wt, info, paths)))
 			}
 			return nil
 		},
@@ -120,9 +121,14 @@ type jsonWorktree struct {
 	Detached bool `json:"detached"`
 	Locked   bool `json:"locked"`
 	Prunable bool `json:"prunable"`
+	Current  bool `json:"current"`
+	Primary  bool `json:"primary"`
+	Stale    bool `json:"stale"`
 
-	LockReason  string `json:"lockReason,omitempty"`
-	PruneReason string `json:"pruneReason,omitempty"`
+	RecommendedAction string `json:"recommendedAction"`
+	SafeToRemove      bool   `json:"safeToRemove"`
+	LockReason        string `json:"lockReason,omitempty"`
+	PruneReason       string `json:"pruneReason,omitempty"`
 
 	Verify *jsonVerifyFields `json:"-"`
 }
@@ -167,6 +173,19 @@ type verifyInfo struct {
 	HostingURL       string
 }
 
+type listSignals struct {
+	Current           bool
+	Primary           bool
+	Stale             bool
+	RecommendedAction string
+	SafeToRemove      bool
+}
+
+type listPaths struct {
+	CurrentWorktree string
+	PrimaryWorktree string
+}
+
 func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 	type baseJSONWorktree struct {
 		Path   string `json:"path"`
@@ -176,9 +195,14 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 		Detached bool `json:"detached"`
 		Locked   bool `json:"locked"`
 		Prunable bool `json:"prunable"`
+		Current  bool `json:"current"`
+		Primary  bool `json:"primary"`
+		Stale    bool `json:"stale"`
 
-		LockReason  string `json:"lockReason,omitempty"`
-		PruneReason string `json:"pruneReason,omitempty"`
+		RecommendedAction string `json:"recommendedAction"`
+		SafeToRemove      bool   `json:"safeToRemove"`
+		LockReason        string `json:"lockReason,omitempty"`
+		PruneReason       string `json:"pruneReason,omitempty"`
 
 		PathExists          *bool  `json:"pathExists,omitempty"`
 		DotGitExists        *bool  `json:"dotGitExists,omitempty"`
@@ -195,14 +219,19 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 	}
 
 	out := baseJSONWorktree{
-		Path:        jwt.Path,
-		HEAD:        jwt.HEAD,
-		Branch:      jwt.Branch,
-		Detached:    jwt.Detached,
-		Locked:      jwt.Locked,
-		Prunable:    jwt.Prunable,
-		LockReason:  jwt.LockReason,
-		PruneReason: jwt.PruneReason,
+		Path:              jwt.Path,
+		HEAD:              jwt.HEAD,
+		Branch:            jwt.Branch,
+		Detached:          jwt.Detached,
+		Locked:            jwt.Locked,
+		Prunable:          jwt.Prunable,
+		Current:           jwt.Current,
+		Primary:           jwt.Primary,
+		Stale:             jwt.Stale,
+		RecommendedAction: jwt.RecommendedAction,
+		SafeToRemove:      jwt.SafeToRemove,
+		LockReason:        jwt.LockReason,
+		PruneReason:       jwt.PruneReason,
 	}
 	if jwt.Verify != nil {
 		if jwt.Verify.MergedIntoBase != nil || jwt.Verify.BaseRef != "" {
@@ -223,12 +252,17 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 
 	if jwt.Verify != nil && (jwt.Verify.MergedIntoBase == nil || jwt.Verify.HostingProvider != "" || jwt.Verify.BaseRef == "") {
 		outMap := map[string]any{
-			"path":     jwt.Path,
-			"head":     jwt.HEAD,
-			"branch":   jwt.Branch,
-			"detached": jwt.Detached,
-			"locked":   jwt.Locked,
-			"prunable": jwt.Prunable,
+			"path":              jwt.Path,
+			"head":              jwt.HEAD,
+			"branch":            jwt.Branch,
+			"detached":          jwt.Detached,
+			"locked":            jwt.Locked,
+			"prunable":          jwt.Prunable,
+			"current":           jwt.Current,
+			"primary":           jwt.Primary,
+			"stale":             jwt.Stale,
+			"recommendedAction": jwt.RecommendedAction,
+			"safeToRemove":      jwt.SafeToRemove,
 		}
 		if jwt.LockReason != "" {
 			outMap["lockReason"] = jwt.LockReason
@@ -266,21 +300,27 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 	return json.Marshal(out)
 }
 
-func toJSONWorktrees(cmd *cobra.Command, d *deps, wts []worktree.Worktree, verifyCtx *listVerifyContext) []jsonWorktree {
+func toJSONWorktrees(cmd *cobra.Command, d *deps, wts []worktree.Worktree, verifyCtx *listVerifyContext, paths listPaths) []jsonWorktree {
 	out := make([]jsonWorktree, 0, len(wts))
 	for _, wt := range wts {
+		info, _ := verifyWorktree(cmd, d, verifyCtx, wt)
+		signals := deriveListSignals(wt, info, paths)
 		jwt := jsonWorktree{
-			Path:        wt.Path,
-			HEAD:        wt.HEAD,
-			Branch:      wt.Branch,
-			Detached:    wt.Detached,
-			Locked:      wt.Locked,
-			Prunable:    wt.Prunable,
-			LockReason:  wt.LockReason,
-			PruneReason: wt.PruneReason,
+			Path:              wt.Path,
+			HEAD:              wt.HEAD,
+			Branch:            wt.Branch,
+			Detached:          wt.Detached,
+			Locked:            wt.Locked,
+			Prunable:          wt.Prunable,
+			Current:           signals.Current,
+			Primary:           signals.Primary,
+			Stale:             signals.Stale,
+			RecommendedAction: signals.RecommendedAction,
+			SafeToRemove:      signals.SafeToRemove,
+			LockReason:        wt.LockReason,
+			PruneReason:       wt.PruneReason,
 		}
 		if verifyCtx != nil {
-			info, _ := verifyWorktree(cmd, d, verifyCtx, wt)
 			if info != nil {
 				jwt.Verify = &jsonVerifyFields{
 					PathExists:       info.PathExists,
@@ -316,11 +356,7 @@ func verifyWorktreeWithContext(ctx context.Context, d *deps, verifyCtx *listVeri
 		return nil, nil
 	}
 
-	_, err := os.Stat(wt.Path)
-	pathExists := err == nil
-
-	_, err = os.Stat(filepath.Join(wt.Path, ".git"))
-	dotGitExists := err == nil
+	pathExists, dotGitExists := worktreePathStatus(wt.Path)
 
 	valid := pathExists && dotGitExists && !wt.Prunable
 
@@ -385,7 +421,7 @@ func verifyWorktreeWithContext(ctx context.Context, d *deps, verifyCtx *listVeri
 	}, nil
 }
 
-func formatWorktreeLine(wt worktree.Worktree, info *verifyInfo) string {
+func formatWorktreeLine(wt worktree.Worktree, info *verifyInfo, signals listSignals) string {
 	head := wt.HEAD
 	if len(head) > 7 {
 		head = head[:7]
@@ -401,12 +437,18 @@ func formatWorktreeLine(wt worktree.Worktree, info *verifyInfo) string {
 	if wt.Prunable {
 		flags = append(flags, "prunable")
 	}
+	if signals.Current {
+		flags = append(flags, "current")
+	}
+	if signals.Primary {
+		flags = append(flags, "primary")
+	}
 
 	if info != nil {
-		if info.LocalVerified && !info.PathExists {
+		if !info.PathExists {
 			flags = append(flags, "missing-path")
 		}
-		if info.LocalVerified && !info.DotGitExists {
+		if !info.DotGitExists {
 			flags = append(flags, "missing-git")
 		}
 		if info.LocalVerified && info.MergedIntoBase != nil && *info.MergedIntoBase {
@@ -415,6 +457,23 @@ func formatWorktreeLine(wt worktree.Worktree, info *verifyInfo) string {
 		if info.MergedViaHosting != nil && *info.MergedViaHosting {
 			flags = append(flags, fmt.Sprintf("merged-hosting:%s", info.HostingProvider))
 		}
+	} else {
+		pathExists, dotGitExists := worktreePathStatus(wt.Path)
+		if !pathExists {
+			flags = append(flags, "missing-path")
+		}
+		if !dotGitExists {
+			flags = append(flags, "missing-git")
+		}
+	}
+	if signals.Stale {
+		flags = append(flags, "stale")
+	}
+	if signals.SafeToRemove {
+		flags = append(flags, "safe-remove")
+	}
+	if signals.RecommendedAction != "none" {
+		flags = append(flags, "recommend:"+signals.RecommendedAction)
 	}
 
 	if len(flags) == 0 {
@@ -454,4 +513,75 @@ func displayBranch(wt worktree.Worktree) string {
 		return "(detached)"
 	}
 	return "(unknown)"
+}
+
+func resolveListPaths(ctx context.Context, d *deps, repoRoot string) listPaths {
+	if d == nil {
+		return listPaths{}
+	}
+
+	paths := listPaths{CurrentWorktree: filepath.Clean(repoRoot)}
+	if strings.TrimSpace(paths.CurrentWorktree) == "" {
+		paths.CurrentWorktree = filepath.Clean(d.Cwd)
+	}
+	if primaryRoot, err := git.PrimaryWorktreeRoot(ctx, d.Runner, repoRoot); err == nil {
+		paths.PrimaryWorktree = filepath.Clean(primaryRoot)
+	}
+	return paths
+}
+
+func deriveListSignals(wt worktree.Worktree, info *verifyInfo, paths listPaths) listSignals {
+	pathExists, dotGitExists := worktreePathStatus(wt.Path)
+	if info != nil {
+		pathExists = info.PathExists
+		dotGitExists = info.DotGitExists
+	}
+
+	current := samePath(wt.Path, paths.CurrentWorktree)
+	primary := samePath(wt.Path, paths.PrimaryWorktree)
+	stale := wt.Prunable || !pathExists || !dotGitExists
+
+	mergedIntoBase := info != nil && info.MergedIntoBase != nil && *info.MergedIntoBase
+	mergedViaHosting := info != nil && info.MergedViaHosting != nil && *info.MergedViaHosting
+	safeToRemove := !wt.Prunable &&
+		!wt.Detached &&
+		!wt.Locked &&
+		!current &&
+		!primary &&
+		pathExists &&
+		dotGitExists &&
+		(mergedIntoBase || mergedViaHosting)
+
+	recommendedAction := "none"
+	switch {
+	case wt.Prunable:
+		recommendedAction = "prune"
+	case safeToRemove:
+		recommendedAction = "remove"
+	}
+
+	return listSignals{
+		Current:           current,
+		Primary:           primary,
+		Stale:             stale,
+		RecommendedAction: recommendedAction,
+		SafeToRemove:      safeToRemove,
+	}
+}
+
+func worktreePathStatus(path string) (bool, bool) {
+	_, err := os.Stat(path)
+	pathExists := err == nil
+
+	_, err = os.Stat(filepath.Join(path, ".git"))
+	dotGitExists := err == nil
+
+	return pathExists, dotGitExists
+}
+
+func samePath(a string, b string) bool {
+	if strings.TrimSpace(a) == "" || strings.TrimSpace(b) == "" {
+		return false
+	}
+	return filepath.Clean(a) == filepath.Clean(b)
 }
