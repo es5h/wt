@@ -1,33 +1,64 @@
 # wt
 
-`wt`는 `git worktree`를 더 쉽게 쓰기 위한 CLI 헬퍼입니다.
+`wt`는 실제 작업용 `git worktree` helper CLI입니다. 현재 `main`에 반영된 기능 기준으로 `list`, `path`, `create`, `root`, `run`, `remove`, `prune`, `cleanup`, `init`, TUI picker 흐름을 제공합니다.
 
-> 상태: WIP (스펙/문서부터 정리 중)
+## Quick Start
 
-## Install (개발용)
-아직 릴리즈/배포는 WIP입니다.
+설치:
 
-- 로컬 설치(권장): `./scripts/install.sh`
-- 또는: `go install ./cmd/wt`
+```sh
+./scripts/install.sh
+```
 
-## Docs
-- 명령/옵션 스펙: `docs/spec/cli.md`
-- 셸 통합/자동완성(초안): `docs/ux/shell.md`
-- TUI(초안): `docs/ux/tui.md`
-- 릴리즈 노트: `docs/release/notes.md`
+또는:
 
-기타 내부 문서(정책/로드맵 등)는 `docs/README.md`에서 확인할 수 있습니다.
+```sh
+go install ./cmd/wt
+```
 
-## Quickstart (개발용)
-- 빌드: `make build`
-- 테스트: `make test`
-- 실행: `make run ARGS="--help"`
+셸 helper 추가:
 
-`make build`/`make test`는 `gofmt`/`go fix`가 깨끗한 상태(`make check`)를 요구합니다.
+```sh
+eval "$(wt init zsh)"
+```
 
-## Optional integrations (수동 설정)
-사용자 데이터/셸 설정 보호를 위해, 설치 스크립트는 자동완성/셸 통합/TUI를 자동 설치하지 않습니다.
+기본 흐름:
 
-- 셸 통합(`wt path`를 `cd`로 연결): `docs/ux/shell.md` 참고 (예: `wtg() { cd "$(wt path "$@")" || return; }`)
-- 자동완성(completion): `docs/ux/shell.md` 참고 (설치 방식은 셸별로 다름)
-- TUI picker: `docs/ux/tui.md` 참고 (현재 초안/미구현일 수 있음)
+```sh
+wt list
+wt path <query>
+wt create <branch>
+wt remove <query> --dry-run
+wt prune
+```
+
+## What It Does
+
+- 현재 repo의 registered worktree를 조회한다: `wt list`, `wt list --verify`, `wt list --verify-hosting`
+- worktree 경로를 안전하게 선택한다: `wt path`, `wt path --tui`, `wt root`, `wt run`
+- 없으면 생성하거나 기존 브랜치에 attach 한다: `wt create`, `wt path --create`
+- stale entry와 안전한 제거 대상을 분리해서 정리한다: `wt prune`, `wt remove`, `wt cleanup`
+- 셸 이동 helper와 completion 연동을 제공한다: `wt init <shell>`, `wt completion <shell>`
+
+## Interactive Flows
+
+- `wt path --tui`: 전체 목록 또는 다중 매칭 후보에서 worktree를 고른다.
+- `wt remove --tui`: 대상을 고른 뒤 기존 remove safety와 confirm 흐름을 그대로 적용한다.
+- `wt prune --tui`: prunable entry를 TUI로 미리 보고, `--apply`일 때만 confirm 뒤 prune 한다.
+
+TUI는 `stdin`과 `stderr`가 모두 TTY일 때만 동작하며, 화면은 `stderr`, 최종 결과는 `stdout`에 유지된다.
+
+## User Docs
+
+- CLI 규칙: `docs/spec/cli.md`
+- 셸 helper / completion: `docs/ux/shell.md`
+- TUI 사용 흐름: `docs/ux/tui.md`
+- 변경 이력: `docs/release/notes.md`
+
+## Development
+
+```sh
+make build
+make test
+make premerge
+```

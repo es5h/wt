@@ -1,30 +1,32 @@
-# Release notes (draft)
+# Release notes
 
-이 문서는 사용자에게 보이는 변경사항을 기록합니다. (README에는 패치 노트를 쓰지 않음)
+README에는 변경 이력을 중복해서 적지 않고, 사용자-facing 변경은 이 문서에만 기록한다.
 
 ## Unreleased
-- 2026-03-05: `wt remove --tui` 추가(`query` 없으면 전체 registered worktree 목록에서 선택, 다중 후보 query는 TUI picker로 확정, 선택 뒤에도 current/primary/prunable safety rule 유지, non-TTY에서는 명확한 에러 반환, confirm/`--dry-run`/`--force`/text·JSON 출력 규칙은 기존 `wt remove`와 일관되게 유지)
-- 2026-03-05: `wt prune --tui` 추가(prunable entry만 TUI preview에 표시, row metadata에 stale 이유 노출, non-TTY에서는 명확히 거부, `--apply`일 때만 preview 뒤 confirm 후 기존 `git worktree prune --expire now` semantics 유지)
-- 2026-03-05: `wt path`/`wt create`의 create 정책을 registered worktree 기준으로 명확화. 일반 `wt path`는 계속 `git worktree list`의 registered path를 그대로 반환하고 filesystem scan을 하지 않으며, `wt path --create`/`wt create`는 로컬 브랜치만 있는 경우 기존 브랜치를 attach 하고, 동일 브랜치 또는 query에 대응되는 registered `prunable` entry가 있으면 자동 복구 대신 `wt prune --apply`를 안내하며 실패
-- 2026-03-05: `wt path --tui`와 공통 TUI picker 기반 추가(`query` 없으면 전체 worktree 선택, `query` 있으면 기존 매칭 규칙을 먼저 적용해 다중 후보일 때만 picker 표시, 단일 후보는 즉시 path-only 출력; 취소 시 exit code `130`; non-TTY에서는 실행 거부, 화면은 stderr에 렌더링)
-- 2026-03-05: `wt cleanup` 추가(`wt list`의 `recommendedAction`을 preview/apply로 연결, 기본 preview-only, `--apply`일 때만 prune/remove 실행, text/JSON 모두 remove 근거에서 로컬 git merged와 hosting merged를 계속 분리)
-- 2026-03-05: fix: linked worktree 안에서 `wt root`가 현재 linked worktree path 대신 primary repo root를 출력하도록 수정
-- 2026-03-05: `wt remove` 추가(기본 `--dry-run` preview-only, `--force`는 즉시 삭제, interactive TTY에서는 확인 프롬프트 지원; current/primary worktree 제거 금지, `prunable` entry는 `wt prune`로 분리)
-- 2026-03-05: `wt root` 추가(기본 stdout path-only, `--json` 시 `{root}` 출력)
-- 2026-03-05: `wt init <shell>` 출력에 `wtr`와 `wcd`를 추가하고, zsh completion bridge가 `wtg`뿐 아니라 `wcd`도 `wt path`처럼 완성하도록 조정
-- 2026-03-05: `wt list`에 `stale`, `recommendedAction`, `safeToRemove`, `current`, `primary` 파생 신호 추가(text/JSON 공통). `prunable`, 로컬 git merged, hosting merged를 계속 분리해 보여주고, detached/current/primary/missing-path 예외는 자동 `remove` 추천에서 제외
-- 2026-03-05: `wt prune` 추가(기본 preview-only, `--apply`일 때만 `git worktree prune --expire now` 실행, stale/prunable entry 정리용)
-- 2026-03-05: breaking: `wt goto`를 제거하고 `wt path`를 정식 경로 선택 명령으로 사용하도록 정리(하위 호환 alias 없음)
-- 2026-03-05: `wt list --verify-hosting`가 GitLab `glab` 기반 merged MR 조회를 지원하도록 확장(`WT_GLAB_BIN` > `PATH`, 자동 로그인 없음, 실패 시 text note / JSON `mergedViaHosting: null` + `hostingReason`으로 degrade, `hostingChangeNumber`/`hostingChangeTitle`/`hostingChangeUrl`를 GitHub와 동일 스키마로 제공)
-- 2026-03-05: `wt run <query> -- <cmd...>` 추가(`wt path`와 같은 매칭 규칙 사용, 종료 코드 보존, `--json` 지원)
-- 2026-03-05: `wt create`와 `wt path --create`가 동일한 worktree root 오버라이드 정책을 공유하도록 리팩터링 (`--root` > `WT_ROOT` > repo-local git config `wt.root` > `<repo>/.wt`)
-- 2026-03-05: `wt list --json --verify` 출력 스키마를 고정해 `pathExists`, `dotGitExists`, `valid`, `mergedIntoBase`, `baseRef`를 항상 포함하도록 조정하고, detached/branch 없음 케이스의 `mergedIntoBase`를 `null`로 명시
-- 2026-03-04: `wt list` 구현(`--json`, `--porcelain`, `--verify`, `--base` 지원)
-- 2026-03-04: `wt path` 구현(`--json` 지원)
-- 2026-03-04: `wt path <query>`에서 “현재 worktree 브랜치”를 동적으로 자동완성 후보로 제공(셸 completion 설치 시)
-- 2026-03-04: `wt init <shell>` 구현(출력-only: rc 자동 수정 없음)
-- 2026-03-04: `wt create <branch>` 구현 + `wt path --create`로 “없으면 생성 후 이동” 지원
-- 2026-03-04: cobra 기반 CLI 스캐폴딩 추가(`cmd/wt`), `wt --version` 지원(`VERSION` + 빌드 시 ldflags 주입)
-- 2026-03-04: `./scripts/install.sh`가 버전 출력 및 “install만으로 update(덮어쓰기)” 동작하도록 개선(자동완성/TUI 자동 설치는 하지 않음)
-- 2026-03-04: `make test`/`make build` 실행 전 `make check`(=`gofmt` + `go fix`)를 필수로 적용 + `make premerge` 게이트 도입
-- 2026-03-04: 문서를 폴더 구조로 리카테고리(`docs/spec`, `docs/policy`, `docs/ux`, `docs/release`, `docs/roadmap`)
+
+- 2026-03-05: 문서를 `main` 기준으로 재정렬했다. PR `#1`~`#23`의 실제 반영 내용을 다시 확인한 뒤 `README`, `CLI spec`, `policy`, `shell`, `TUI`, `roadmap`, `PR guide`를 현재 구현과 맞추고 역할 경계를 정리했다.
+- 2026-03-05: `wt prune --tui` 추가. prunable entry를 TUI preview로 확인할 수 있고, `--apply`와 함께 쓰면 preview 뒤 confirm을 거쳐 `git worktree prune --expire now`를 실행한다. 취소는 exit code `130`, `--json`과는 함께 쓸 수 없다.
+- 2026-03-05: `wt remove --tui` 추가. query 생략 시 전체 registered worktree에서 고르고, 다중 후보 query는 TUI로 확정할 수 있다. 선택 뒤에도 current/primary/prunable safety는 그대로 유지한다.
+- 2026-03-05: `wt path --tui` 추가. query 없이 전체 worktree를 고르거나, 다중 매칭 후보를 TUI로 고를 수 있다. TUI 화면은 `stderr`, 최종 path는 `stdout`에 유지한다.
+- 2026-03-05: `wt path --create`와 `wt create`의 생성 안전 규칙을 정리했다. 일반 `wt path`는 registered path를 그대로 반환하고, `--create` 계열은 registered `prunable` entry가 남아 있으면 자동 복구 대신 `wt prune --apply`를 안내하며 실패한다.
+- 2026-03-05: `wt cleanup` 추가. `wt list`의 `recommendedAction`을 실제 `prune`/`remove` 실행과 연결하며 기본값은 preview-only 다.
+- 2026-03-05: linked worktree 안에서 `wt root`가 primary repo root를 반환하도록 수정했다.
+- 2026-03-05: `wt remove` 추가. interactive TTY에서는 confirm prompt를 사용하고, non-interactive 환경에서는 `--dry-run` 또는 `--force`를 요구한다.
+- 2026-03-05: `wt root` 추가. 기본 모드는 path-only, `--json`은 `{root}`를 출력한다.
+- 2026-03-05: `wt init <shell>` 출력에 `wtr`, `wcd`를 추가하고, zsh completion bridge가 `wtg`와 `wcd` 모두를 `wt path` completion에 연결하도록 정리했다.
+- 2026-03-05: `wt list`에 `stale`, `recommendedAction`, `safeToRemove`, `current`, `primary` 파생 신호를 추가했다.
+- 2026-03-05: `wt prune` 추가. 기본값은 preview-only 이고, `--apply`일 때만 stale/prunable entry 정리를 수행한다.
+- 2026-03-05: `wt goto`를 제거하고 `wt path`를 정식 경로 선택 명령으로 고정했다.
+- 2026-03-05: `wt list --verify-hosting`가 GitLab `glab` 기반 merged MR 조회를 지원하도록 확장했다.
+- 2026-03-05: `wt run <query> -- <cmd...>` 추가. `wt path`와 같은 매칭 규칙으로 worktree를 고른 뒤 해당 디렉터리에서 명령을 실행한다.
+- 2026-03-05: `wt create`와 `wt path --create`가 공통 root override 정책을 사용하도록 정리했다. 우선순위는 `--root` > `WT_ROOT` > repo-local `wt.root` > default root 다.
+- 2026-03-05: `wt list --json --verify` 출력 스키마를 고정했다. `pathExists`, `dotGitExists`, `valid`, `mergedIntoBase`, `baseRef`를 안정적으로 포함하고, detached 항목은 `mergedIntoBase: null`을 사용한다.
+- 2026-03-04: `wt list` 구현. `--json`, `--porcelain`, `--verify`, `--base` 지원.
+- 2026-03-04: `wt path` 구현. 기본 출력은 path-only, `--json` 지원.
+- 2026-03-04: `wt path <query>` 동적 completion 구현. 기본값은 현재 registered worktree 후보, `WT_PATH_COMPLETE_REMOTE=1`이면 원격 브랜치 후보를 추가한다.
+- 2026-03-04: `wt init <shell>` 구현. 출력-only 방식으로 셸 helper를 제공한다.
+- 2026-03-04: `wt create <branch>` 구현과 `wt path --create` 지원 추가.
+- 2026-03-04: Cobra 기반 CLI 구조와 `wt --version` 지원 추가.
+- 2026-03-04: `./scripts/install.sh` 개선. 버전 출력과 명시적 overwrite(`--force`)를 지원하고, completion/TUI 설치는 자동으로 하지 않는다.
+- 2026-03-04: `make premerge` 게이트 추가. `make check`와 테스트를 머지 전 기본 검증으로 사용한다.
+- 2026-03-04: 문서 레이아웃을 `docs/spec`, `docs/policy`, `docs/ux`, `docs/release`, `docs/roadmap` 구조로 정리했다.
