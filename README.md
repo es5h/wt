@@ -62,3 +62,11 @@ make build
 make test
 make premerge
 ```
+
+## License
+
+MIT. See `LICENSE`.
+
+## License
+
+MIT. See `LICENSE`.
