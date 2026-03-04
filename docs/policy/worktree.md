@@ -111,3 +111,12 @@ repo-local git config 예시:
 - interactive TTY에서만 확인 프롬프트 기반 제거를 허용하고, non-interactive 환경에서는 `--dry-run` 또는 `--force`를 요구한다.
 - primary worktree와 현재 실행 중인 worktree는 제거할 수 없다.
 - `prunable` entry는 `wt remove`가 아니라 `wt prune`로 정리한다.
+
+## Cleanup safety
+- `wt cleanup`는 `wt list`의 실행형 companion 명령이다.
+- 기본 동작은 항상 preview-only 이다.
+- 실제 변경은 `--apply`일 때만 수행한다.
+- `recommendedAction=prune`는 `wt prune`와 같은 prune 정책으로만 처리한다.
+- `recommendedAction=remove`는 `safeToRemove=true`인 항목에만 적용하고, current/primary/detached/locked/missing-path/missing-git/prunable 예외는 그대로 유지한다.
+- squash merge 때문에 `mergedIntoBase`와 `mergedViaHosting`가 다를 수 있으므로, remove 추천/출력에서는 근거를 분리해 유지한다.
+- `wt list` 자체에는 destructive 동작을 추가하지 않는다.

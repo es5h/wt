@@ -165,6 +165,29 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 - 기본 text 출력은 `would-prune` / `pruned` / `kept` 상태를 한 줄씩 보여준다.
 - `--apply` 후에는 prune 전 후보 목록을 기준으로, prune 후 다시 조회해 `removed` 여부를 계산한다.
 
+## `wt cleanup`
+목표: `wt list`의 추천 신호를 실제 prune/remove 실행과 연결한다.
+
+규칙:
+- 기본 동작은 preview-only 이다. 실제 변경은 하지 않는다.
+- 기본 대상은 `wt list`와 동일한 파생 신호(`recommendedAction`)를 사용한다.
+- `recommendedAction=prune`이면 prune 후보로, `recommendedAction=remove`이면 remove 후보로, `recommendedAction=none`이면 skip 으로 처리한다.
+- 로컬 git merged와 hosting merged는 계속 분리해서 유지한다.
+- 기본 text 출력은 각 항목을 `would-prune` / `would-remove` / `skip` 한 줄로 보여준다.
+- `--apply`가 있을 때만 실제 변경을 수행한다.
+- prune 실행은 기존 `wt prune`와 같은 `git worktree prune --expire now` 정책을 사용한다.
+- remove 실행은 기존 `wt remove`와 같은 `git worktree remove --force <path>` 정책을 사용하되, `safeToRemove` 기준을 만족하는 추천 항목에만 적용한다.
+
+옵션:
+- `--apply`: 실제 prune/remove 실행
+- `--json`: 배열 출력
+
+현재 구현 규칙:
+- text 출력은 `action  path  (branch)  [reason]` 형식을 유지한다.
+- remove 이유는 `merged:<base>` 또는 `merged-hosting:<provider>[#number]`처럼 짧게 표시한다.
+- JSON 각 항목은 최소한 `path`, `branch`, `recommendedAction`, `action`, `applied`, `removed`, `reason`, `safeToRemove`를 포함한다.
+- JSON은 필요 시 `mergedIntoBase`, `baseRef`, `mergedViaHosting`, `hostingProvider`, `hostingKind`를 함께 포함해 로컬 git merged와 hosting merged 의미를 분리한다.
+
 ## `wt init <shell>`
 목표: `path`가 `cd`될 수 있도록 셸 함수/alias를 출력한다.
 
