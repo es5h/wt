@@ -52,7 +52,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.SetVersionTemplate("wt {{.Version}}\n")
 
 	rootCmd.AddCommand(newListCmd())
-	rootCmd.AddCommand(newGotoCmd())
+	rootCmd.AddCommand(newPathCmd())
 	rootCmd.AddCommand(newRunCmd())
 	rootCmd.AddCommand(newInitCmd())
 	rootCmd.AddCommand(newCreateCmd())

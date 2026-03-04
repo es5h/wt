@@ -13,7 +13,7 @@ import (
 	"wt/internal/runner"
 )
 
-func TestGoto_PrintsOnlyPath(t *testing.T) {
+func TestPath_PrintsOnlyPath(t *testing.T) {
 	t.Parallel()
 
 	const cwd = "/cwd"
@@ -56,7 +56,7 @@ branch refs/heads/feature-x
 	var stdout, stderr bytes.Buffer
 	root.SetOut(&stdout)
 	root.SetErr(&stderr)
-	root.SetArgs([]string{"goto", "feature-x"})
+	root.SetArgs([]string{"path", "feature-x"})
 	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{Runner: r, Cwd: cwd}))
 
 	if err := root.Execute(); err != nil {
@@ -70,7 +70,7 @@ branch refs/heads/feature-x
 	}
 }
 
-func TestGoto_JSON(t *testing.T) {
+func TestPath_JSON(t *testing.T) {
 	t.Parallel()
 
 	const cwd = "/cwd"
@@ -109,7 +109,7 @@ branch refs/heads/feature-x
 	var stdout, stderr bytes.Buffer
 	root.SetOut(&stdout)
 	root.SetErr(&stderr)
-	root.SetArgs([]string{"goto", "feature-x", "--json"})
+	root.SetArgs([]string{"path", "feature-x", "--json"})
 	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{Runner: r, Cwd: cwd}))
 
 	if err := root.Execute(); err != nil {
@@ -131,8 +131,8 @@ branch refs/heads/feature-x
 	}
 }
 
-func TestGotoCompletion_SuggestsWorktreeBranches(t *testing.T) {
-	t.Setenv("WT_GOTO_COMPLETE_REMOTE", "0")
+func TestPathCompletion_SuggestsWorktreeBranches(t *testing.T) {
+	t.Setenv("WT_PATH_COMPLETE_REMOTE", "0")
 
 	const cwd = "/cwd"
 	const repo = "/repo"
@@ -170,7 +170,7 @@ branch refs/heads/feature-x
 		},
 	}
 
-	cmd := newGotoCmd()
+	cmd := newPathCmd()
 	cmd.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{Runner: r, Cwd: cwd}))
 
 	got, dir := cmd.ValidArgsFunction(cmd, []string{}, "")
@@ -184,8 +184,8 @@ branch refs/heads/feature-x
 	}
 }
 
-func TestGotoCompletion_FiltersByPrefix(t *testing.T) {
-	t.Setenv("WT_GOTO_COMPLETE_REMOTE", "0")
+func TestPathCompletion_FiltersByPrefix(t *testing.T) {
+	t.Setenv("WT_PATH_COMPLETE_REMOTE", "0")
 
 	const cwd = "/cwd"
 	const repo = "/repo"
@@ -223,7 +223,7 @@ branch refs/heads/feature-x
 		},
 	}
 
-	cmd := newGotoCmd()
+	cmd := newPathCmd()
 	cmd.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{Runner: r, Cwd: cwd}))
 
 	got, _ := cmd.ValidArgsFunction(cmd, []string{}, "f")
@@ -232,8 +232,8 @@ branch refs/heads/feature-x
 	}
 }
 
-func TestGotoCompletion_RemoteOptIn(t *testing.T) {
-	t.Setenv("WT_GOTO_COMPLETE_REMOTE", "1")
+func TestPathCompletion_RemoteOptIn(t *testing.T) {
+	t.Setenv("WT_PATH_COMPLETE_REMOTE", "1")
 
 	const cwd = "/cwd"
 	const repo = "/repo"
@@ -276,7 +276,7 @@ branch refs/heads/main
 		},
 	}
 
-	cmd := newGotoCmd()
+	cmd := newPathCmd()
 	cmd.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{Runner: r, Cwd: cwd}))
 
 	got, _ := cmd.ValidArgsFunction(cmd, []string{}, "f")
@@ -285,7 +285,7 @@ branch refs/heads/main
 	}
 }
 
-func TestGoto_CreateWhenMissing(t *testing.T) {
+func TestPath_CreateWhenMissing(t *testing.T) {
 	t.Parallel()
 
 	const cwd = "/cwd"
@@ -384,7 +384,7 @@ branch refs/heads/main
 	var stdout, stderr bytes.Buffer
 	root.SetOut(&stdout)
 	root.SetErr(&stderr)
-	root.SetArgs([]string{"goto", "feature-x", "--create"})
+	root.SetArgs([]string{"path", "feature-x", "--create"})
 	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{Runner: r, Cwd: cwd}))
 
 	if err := root.Execute(); err != nil {
@@ -398,7 +398,7 @@ branch refs/heads/main
 	}
 }
 
-func TestGoto_CreateUsesRootFlag(t *testing.T) {
+func TestPath_CreateUsesRootFlag(t *testing.T) {
 	t.Parallel()
 
 	const cwd = "/cwd"
@@ -462,7 +462,7 @@ branch refs/heads/main
 	var stdout, stderr bytes.Buffer
 	root.SetOut(&stdout)
 	root.SetErr(&stderr)
-	root.SetArgs([]string{"goto", "feature-x", "--create", "--root", "/alt-root"})
+	root.SetArgs([]string{"path", "feature-x", "--create", "--root", "/alt-root"})
 	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{Runner: r, Cwd: cwd}))
 
 	if err := root.Execute(); err != nil {

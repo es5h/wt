@@ -43,7 +43,7 @@
   - 예: branch 정보가 없는 entry
 - `baseRef`는 `--verify`가 켜진 JSON 출력에서 항상 문자열로 포함된다.
 
-## `wt goto [query]`
+## `wt path [query]`
 목표: query로 worktree를 선택하고 “경로”를 stdout으로 출력한다.
 
 규칙:
@@ -71,10 +71,10 @@
 TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 
 ## `wt run <query> -- <cmd...>`
-목표: `wt goto`와 같은 매칭 규칙으로 worktree를 선택한 뒤, 그 디렉토리에서 `<cmd...>`를 실행한다.
+목표: `wt path`와 같은 매칭 규칙으로 worktree를 선택한 뒤, 그 디렉토리에서 `<cmd...>`를 실행한다.
 
 규칙:
-- `<query>` 매칭/모호성 처리/에러 코드는 `wt goto`와 동일하다.
+- `<query>` 매칭/모호성 처리/에러 코드는 `wt path`와 동일하다.
 - 기본 모드는 하위 프로세스의 stdout/stderr를 그대로 전달하고, 하위 프로세스의 종료 코드를 그대로 반환한다.
 - `--json`은 stdout에 선택된 worktree와 실행 결과를 JSON으로 출력한다.
 
@@ -113,7 +113,7 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 - `--dry-run`
 
 ## `wt init <shell>`
-목표: `goto`가 `cd`될 수 있도록 셸 함수/alias를 출력한다.
+목표: `path`가 `cd`될 수 있도록 셸 함수/alias를 출력한다.
 
 지원 셸(초안): `zsh`, `bash`, `fish`
 

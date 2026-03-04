@@ -21,7 +21,7 @@ func TestInit_Zsh(t *testing.T) {
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "wtg() { cd \"$(wt goto") {
+	if !strings.Contains(stdout.String(), "wtg() { cd \"$(wt path") {
 		t.Fatalf("stdout = %q, want wtg function", stdout.String())
 	}
 	if !strings.Contains(stdout.String(), "compdef _wtg wtg") {

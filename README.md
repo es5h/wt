@@ -28,6 +28,6 @@
 ## Optional integrations (수동 설정)
 사용자 데이터/셸 설정 보호를 위해, 설치 스크립트는 자동완성/셸 통합/TUI를 자동 설치하지 않습니다.
 
-- 셸 통합(`wt goto`를 `cd`로 연결): `docs/ux/shell.md` 참고 (예: `wtg() { cd "$(wt goto "$@")" || return; }`)
+- 셸 통합(`wt path`를 `cd`로 연결): `docs/ux/shell.md` 참고 (예: `wtg() { cd "$(wt path "$@")" || return; }`)
 - 자동완성(completion): `docs/ux/shell.md` 참고 (설치 방식은 셸별로 다름)
 - TUI picker: `docs/ux/tui.md` 참고 (현재 초안/미구현일 수 있음)

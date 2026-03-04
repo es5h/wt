@@ -16,7 +16,7 @@
 - 그 부모 디렉토리를 `<primary-root>`로 사용한다.
 
 의도:
-- linked worktree 내부에서 `wt create`/`wt goto --create`를 실행해도, 기본 경로가 “현재 worktree 아래”로 잡혀 중첩되는 문제(예: `.wt/a/.wt/b/...`)를 방지한다.
+- linked worktree 내부에서 `wt create`/`wt path --create`를 실행해도, 기본 경로가 “현재 worktree 아래”로 잡혀 중첩되는 문제(예: `.wt/a/.wt/b/...`)를 방지한다.
 
 ## Overrides (opt-in)
 기본 정책은 재현성을 위해 고정하되, 사용자/팀 환경에 맞게 “명시적으로” 오버라이드할 수 있게 한다.
@@ -28,7 +28,7 @@
 4) Default policy (`<primary-root>/.wt`)
 
 규칙:
-- 이 우선순위는 `wt create`와 `wt goto --create`에 동일하게 적용한다.
+- 이 우선순위는 `wt create`와 `wt path --create`에 동일하게 적용한다.
 - `--path`가 지정되면 최종 생성 경로를 직접 지정한 것으로 보고 root 정책보다 우선한다.
 - `--root`, `WT_ROOT`, `wt.root` 값이 상대 경로이면 모두 `<primary-root>` 기준으로 해석한다.
 - `wt.root`는 repo-local config만 읽는다. global/system git config는 이 정책에 포함하지 않는다.

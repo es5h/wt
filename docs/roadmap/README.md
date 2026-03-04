@@ -6,16 +6,16 @@
 - 개발/에이전트 런북: `AGENTS.md`
 
 ## Milestones (idea)
-- M0 Core: `list`, `goto` 기본 UX + 안정적 출력 포맷
-- M1 Create/Remove: `goto --create`, `create`, `remove`, `prune` (안전장치 포함)
+- M0 Core: `list`, `path` 기본 UX + 안정적 출력 포맷
+- M1 Create/Remove: `path --create`, `create`, `remove`, `prune` (안전장치 포함)
 - M2 Shell: `init <shell>` + completion 스크립트
-- M3 TUI: `goto` TUI picker
+- M3 TUI: `path` TUI picker
 
 버전(semver)은 로드맵이 아니라 `VERSION` + `docs/release/notes.md`에서만 관리한다.
 
 ## Open questions
 - completion 설치 UX를 `wt init`에 포함할지, 별도 `wt completion <shell>`로 분리할지
-- `wt goto` 다중 후보 시 기본 동작(TUI 자동 vs 에러 vs 프롬프트)
+- `wt path` 다중 후보 시 기본 동작(TUI 자동 vs 에러 vs 프롬프트)
 - TUI 취소 시 exit code(130 vs 1) 정책
 
 ## Dependencies / implementation choices

@@ -24,7 +24,7 @@ func newRunCmd() *cobra.Command {
 			return nil
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			return completeGotoQuery(cmd, args, toComplete)
+			return completePathQuery(cmd, args, toComplete)
 		},
 		SilenceUsage:  true,
 		SilenceErrors: true,
