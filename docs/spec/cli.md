@@ -72,6 +72,7 @@ query와 매칭되는 registered worktree path를 출력한다.
 - `--path <dir>`: `--create` 시 최종 경로 지정
 - `--root <dir>`: `--create` 시 기본 root 지정
 - `--from <ref>`: `--create` 시 start point 지정
+- `--dry-run`: `--create` 실행 계획만 출력(실제 생성 없음)
 - `--tui`: 전체 목록 또는 다중 후보에서 TUI 선택
 - `--no-tui`: 다중 후보 시에도 TUI 없이 실패
 
@@ -79,7 +80,7 @@ query와 매칭되는 registered worktree path를 출력한다.
 
 - `--tui`와 `--no-tui`는 함께 쓸 수 없다.
 - `--tui`와 `--create`는 함께 쓸 수 없다.
-- `--path`, `--root`, `--from`은 `--create`가 있을 때만 허용된다.
+- `--path`, `--root`, `--from`, `--dry-run`은 `--create`가 있을 때만 허용된다.
 - `query` 없이 `--no-tui`는 허용되지 않는다.
 
 `--create` 규칙:
@@ -89,6 +90,13 @@ query와 매칭되는 registered worktree path를 출력한다.
 - 로컬 브랜치가 없고 `origin/<branch>`가 있으면 `git worktree add -b <branch> <path> origin/<branch>`를 사용한다.
 - 둘 다 없으면 `git worktree add -b <branch> <path> <from>`을 사용한다.
 - 동일 브랜치 또는 query에 대응되는 registered `prunable` entry가 있으면 자동 복구하지 않고 실패하며 `wt prune --apply`를 안내한다.
+- 최종 생성 경로 preflight를 먼저 수행한다:
+  - 경로가 없으면 통과
+  - 기존 파일이면 usage error(exit code 2)
+  - 기존 디렉터리가 비어있으면 통과
+  - 기존 디렉터리가 비어있지 않으면 usage error(exit code 2)
+  - symbolic link를 포함한 기타 타입은 usage error(exit code 2)
+- `--dry-run`도 동일 preflight를 수행하고, 통과 시에만 `stderr`에 preview command를 출력한다.
 
 ## `wt root`
 
@@ -141,11 +149,7 @@ branch용 worktree를 만든다.
 
 - 실제 생성 대신 실행될 `git worktree add ...` 명령을 `stderr`에 출력한다.
 - 반환값은 실제 생성 시 사용할 path다.
-
-현재 한계(구현 기준):
-
-- `--path` 또는 root 정책으로 계산된 최종 경로가 “파일인지/디렉터리인지/비어있는지”를 `wt`가 사전에 검사하지 않는다.
-- 해당 검증은 현재 `git worktree add` 실행 결과에 의존한다.
+- 실제 실행 전 최종 생성 경로 preflight를 동일하게 수행한다.
 
 ## `wt remove [query]`
 

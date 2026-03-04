@@ -1039,6 +1039,11 @@ func TestPathRejectsCreateOnlyFlagsWithoutCreate(t *testing.T) {
 			args: []string{"path", "feature-x", "--from", "origin/main"},
 			want: "wt path: --from requires --create",
 		},
+		{
+			name: "dry-run flag",
+			args: []string{"path", "feature-x", "--dry-run"},
+			want: "wt path: --dry-run requires --create",
+		},
 	}
 
 	for _, tt := range tests {

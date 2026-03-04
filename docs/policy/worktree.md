@@ -36,7 +36,11 @@
 - 로컬 브랜치가 이미 있으면 새 브랜치를 만들지 않고 attach 한다.
 - 동일 브랜치 또는 query에 대응되는 registered `prunable` entry가 있으면 자동 복구하지 않고 실패한다.
 - stale registered entry 정리는 사용자가 `wt prune --apply`로 명시적으로 수행해야 한다.
-- 최종 생성 경로의 파일/디렉터리 타입과 디렉터리 비어 있음 여부는 현재 사전검증하지 않고 `git worktree add` 결과에 의존한다.
+- 최종 생성 경로 preflight를 수행한다.
+- 기존 파일은 usage error(exit code 2)로 실패한다.
+- 기존 디렉터리는 비어있을 때만 허용하고, 비어있지 않으면 usage error(exit code 2)로 실패한다.
+- symbolic link를 포함한 기타 파일 타입은 보수적으로 usage error(exit code 2)로 실패한다.
+- `--dry-run`도 동일 preflight를 먼저 수행한다.
 
 ## Branch To Path Normalization
 
