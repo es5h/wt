@@ -192,16 +192,25 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 규칙:
 - 기본 동작은 preview-only 이다. 실제 변경은 하지 않는다.
 - `git worktree list`에서 `prunable`로 표시되는 entry만 대상이다.
+- `--tui`는 prunable entry만 보여주는 interactive preview 모드다.
+- `--tui`는 `stdin`과 `stderr`가 모두 TTY일 때만 허용한다.
+- `--tui` preview에서는 각 row에 branch/path와 stale 이유(`pruneReason`)를 함께 보여준다.
+- `--tui --apply`는 preview 뒤에 confirm prompt를 거친 뒤에만 실제 prune을 진행한다.
 - `--apply`가 있을 때만 `git worktree prune --expire now`를 실행한다.
 - primary worktree나 정상 worktree는 직접 제거하지 않는다.
+- `--tui`와 `--json`은 함께 사용할 수 없다.
 
 옵션:
 - `--apply`: 실제 prune 실행
+- `--tui`: prunable entry를 TUI preview로 확인
 - `--json`: `{path, branch, pruneReason, action, removed}` 배열 출력
 
 현재 구현 규칙:
 - 기본 text 출력은 `would-prune` / `pruned` / `kept` 상태를 한 줄씩 보여준다.
 - `--apply` 후에는 prune 전 후보 목록을 기준으로, prune 후 다시 조회해 `removed` 여부를 계산한다.
+- `wt prune --tui`는 preview-only 기본값을 유지하고, TUI를 닫은 뒤에도 최종 stdout은 기존 text 출력 규칙을 그대로 따른다.
+- `wt prune --tui --apply`의 실제 변경은 여전히 `git worktree prune --expire now` 한 번만 호출해 수행한다.
+- TUI preview 취소(`Esc`/`Ctrl+C`)는 exit code `130`, confirm 거부는 `wt prune: aborted`로 종료한다.
 
 ## `wt cleanup`
 목표: `wt list`의 추천 신호를 실제 prune/remove 실행과 연결한다.
