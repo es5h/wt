@@ -22,6 +22,7 @@ func newPathCmd() *cobra.Command {
 	var createPath string
 	var createRoot string
 	var createFrom string
+	var createDryRun bool
 
 	cmd := &cobra.Command{
 		Use:   "path [query]",
@@ -37,7 +38,7 @@ func newPathCmd() *cobra.Command {
 			if len(args) > 0 {
 				query = strings.TrimSpace(args[0])
 			}
-			if err := validatePathMode(query, create, tui, noTui, createPath, createRoot, createFrom); err != nil {
+			if err := validatePathMode(query, create, tui, noTui, createPath, createRoot, createFrom, createDryRun); err != nil {
 				return err
 			}
 			if query == "" && !tui {
@@ -115,9 +116,10 @@ func newPathCmd() *cobra.Command {
 				}
 
 				path, err := createWorktreeFromList(ctx, d, repoRoot, primaryRoot, "wt path", branch, createOpts{
-					Path: createPath,
-					Root: createRoot,
-					From: createFrom,
+					Path:   createPath,
+					Root:   createRoot,
+					From:   createFrom,
+					DryRun: createDryRun,
 				}, wts)
 				if err != nil {
 					return err
@@ -155,11 +157,12 @@ func newPathCmd() *cobra.Command {
 	cmd.Flags().StringVar(&createPath, "path", "", "worktree path for --create")
 	cmd.Flags().StringVar(&createRoot, "root", "", "worktree root for --create default path resolution")
 	cmd.Flags().StringVar(&createFrom, "from", "", "start point for --create (default: origin/<branch> if exists, else origin/HEAD or main)")
+	cmd.Flags().BoolVar(&createDryRun, "dry-run", false, "print what would be executed for --create (no changes)")
 
 	return cmd
 }
 
-func validatePathMode(query string, create bool, tui bool, noTui bool, createPath string, createRoot string, createFrom string) error {
+func validatePathMode(query string, create bool, tui bool, noTui bool, createPath string, createRoot string, createFrom string, createDryRun bool) error {
 	if tui && noTui {
 		return usageError(fmt.Errorf("wt path: --tui and --no-tui cannot be combined"))
 	}
@@ -181,6 +184,9 @@ func validatePathMode(query string, create bool, tui bool, noTui bool, createPat
 		}
 		if strings.TrimSpace(createFrom) != "" {
 			return usageError(fmt.Errorf("wt path: --from requires --create"))
+		}
+		if createDryRun {
+			return usageError(fmt.Errorf("wt path: --dry-run requires --create"))
 		}
 	}
 	return nil
