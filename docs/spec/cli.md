@@ -99,7 +99,8 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 
 규칙:
 - 기본 모드는 **경로만 출력**한다(추가 텍스트/색상 금지).
-- 출력은 `git rev-parse --show-toplevel` 기준 repo root path다.
+- linked worktree 안에서 실행해도 primary worktree의 repo root path를 출력한다.
+- 구현은 공유 git dir(`git rev-parse --path-format=absolute --git-common-dir`) 기준으로 primary root를 계산한다.
 
 옵션:
 - `--json`: `{root}` 출력

@@ -14,7 +14,7 @@ func newRepoRootCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:           "root",
-		Short:         "Print repository root path",
+		Short:         "Print primary repository root path",
 		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -24,7 +24,7 @@ func newRepoRootCmd() *cobra.Command {
 				return err
 			}
 
-			root, err := git.RepoRoot(cmd.Context(), d.Runner, d.Cwd)
+			root, err := git.PrimaryWorktreeRoot(cmd.Context(), d.Runner, d.Cwd)
 			if err != nil {
 				return err
 			}

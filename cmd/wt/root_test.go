@@ -21,9 +21,9 @@ func TestRoot_PathOnly(t *testing.T) {
 			{
 				workDir: cwd,
 				name:    "git",
-				args:    []string{"rev-parse", "--show-toplevel"},
+				args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
 				res: runner.Result{
-					Stdout:   []byte(repo + "\n"),
+					Stdout:   []byte(repo + "/.git\n"),
 					ExitCode: 0,
 				},
 			},
@@ -60,9 +60,9 @@ func TestRoot_JSON(t *testing.T) {
 			{
 				workDir: cwd,
 				name:    "git",
-				args:    []string{"rev-parse", "--show-toplevel"},
+				args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
 				res: runner.Result{
-					Stdout:   []byte(repo + "\n"),
+					Stdout:   []byte(repo + "/.git\n"),
 					ExitCode: 0,
 				},
 			},
