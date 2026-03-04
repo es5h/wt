@@ -71,6 +71,15 @@
 ## PR guidelines
 - PR 작성 가이드: `docs/pr-guidelines.md`
 
+## Orchestrator context rules
+- 오케스트레이터(상위 에이전트)가 작업을 시작할 때는 아래 문서를 **항상 `@` context로 추가**한다.
+  - `@docs/prompts/feature-pr-template.md`
+  - `@docs/pr-guidelines.md`
+  - `@AGENTS.md`
+- 작업 시작 응답에서, 위 문서 기준으로 이번 작업의 `Goal`, `Constraints`, `Definition of Done`을 3~6줄로 먼저 요약한다.
+- 사용자-facing 변경 작업에서는 템플릿(`docs/prompts/feature-pr-template.md`)의 섹션 구조를 유지해 PR 본문을 작성한다.
+- `@` context 문서에 없는 내용을 추측으로 규칙화하지 않는다.
+
 ## PR / agent writing rules
 - 에이전트가 PR 본문/설명/체크리스트를 작성하거나 수정할 때는 **기본적으로 한글**로 작성한다.
 - 사용자에게 보이는 변경이 있는 PR이면, PR 본문에 **E2E 재현 가이드**를 포함한다.

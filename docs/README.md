@@ -8,3 +8,4 @@
 - `docs/release/notes.md`: 사용자-facing 변경 이력
 - `docs/roadmap/README.md`: 이미 완료된 범위와 다음 현실적 개발 순서
 - `docs/pr-guidelines.md`: PR 본문과 E2E 작성 규칙
+- `docs/prompts/feature-pr-template.md`: 팀 표준 재사용 프롬프트 템플릿

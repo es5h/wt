@@ -9,6 +9,7 @@
 - 파괴적 동작은 기본값으로 두지 않는다.
 - 자동화 에이전트가 작성하는 PR 본문은 기본적으로 한글을 사용한다.
 - 예시와 E2E 가이드에는 로컬 절대경로, 계정명, 사내 URL 같은 민감정보를 넣지 않는다.
+- 재사용 프롬프트는 `docs/prompts/feature-pr-template.md`를 기본으로 사용한다.
 
 ## Merge Gate
 
@@ -111,3 +112,9 @@ PR 본문에는 수정한 사용자 문서를 명시한다.
 - `docs/spec/cli.md`
 - `docs/release/notes.md`
 - 필요 시 `docs/ux/*`, `docs/policy/*`, `docs/roadmap/*`
+
+## Prompt Template
+
+- 팀 표준 구현 프롬프트: `docs/prompts/feature-pr-template.md`
+- 권장 방식: 템플릿 변수(`<...>`)를 채운 뒤 에이전트에 전달
+- 리뷰 시 확인: 템플릿의 `Definition of Done` 체크 항목 충족 여부
