@@ -9,3 +9,11 @@ import (
 func stdinIsTTY() bool {
 	return term.IsTerminal(int(os.Stdin.Fd()))
 }
+
+func stderrIsTTY() bool {
+	return term.IsTerminal(int(os.Stderr.Fd()))
+}
+
+func stdioCanUseTUI() bool {
+	return stdinIsTTY() && stderrIsTTY()
+}

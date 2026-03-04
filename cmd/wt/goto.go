@@ -24,28 +24,32 @@ func newPathCmd() *cobra.Command {
 	var createFrom string
 
 	cmd := &cobra.Command{
-		Use:   "path <query>",
+		Use:   "path [query]",
 		Short: "Print selected worktree path",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			return completePathQuery(cmd, args, toComplete)
 		},
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if tui {
-				return usageError(fmt.Errorf("wt path: --tui is not implemented yet"))
+			query := ""
+			if len(args) > 0 {
+				query = strings.TrimSpace(args[0])
 			}
-			_ = noTui
-
-			query := strings.TrimSpace(args[0])
-			if query == "" {
-				return usageError(fmt.Errorf("wt path: query cannot be empty"))
+			if err := validatePathMode(query, create, tui, noTui, createPath, createRoot, createFrom); err != nil {
+				return err
+			}
+			if query == "" && !tui {
+				return usageError(fmt.Errorf("wt path: query is required unless --tui is set"))
 			}
 
 			d, err := getDeps(cmd)
 			if err != nil {
 				return err
+			}
+			if tui && (d.CanUseTUI == nil || !d.CanUseTUI()) {
+				return usageError(fmt.Errorf("wt path: --tui requires a TTY on stdin and stderr"))
 			}
 
 			ctx := cmd.Context()
@@ -57,6 +61,29 @@ func newPathCmd() *cobra.Command {
 			wts, err := git.WorktreeList(ctx, d.Runner, repoRoot)
 			if err != nil {
 				return err
+			}
+
+			if tui {
+				chosen, err := selectWorktreeWithTUI(cmd, d, "wt path", wts, query)
+				if err != nil {
+					return err
+				}
+
+				if jsonOut {
+					type out struct {
+						Path   string `json:"path"`
+						Branch string `json:"branch,omitempty"`
+					}
+					enc := json.NewEncoder(cmd.OutOrStdout())
+					enc.SetIndent("", "  ")
+					return enc.Encode(out{
+						Path:   chosen.Path,
+						Branch: strings.TrimPrefix(chosen.Branch, "refs/heads/"),
+					})
+				}
+
+				fmt.Fprintln(cmd.OutOrStdout(), chosen.Path)
+				return nil
 			}
 
 			matches := matchWorktrees(wts, query)
@@ -113,13 +140,40 @@ func newPathCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "structured JSON output")
 	cmd.Flags().BoolVar(&create, "create", false, "create worktree if missing")
-	cmd.Flags().BoolVar(&tui, "tui", false, "use TUI selection (not implemented yet)")
-	cmd.Flags().BoolVar(&noTui, "no-tui", false, "disable TUI selection (reserved)")
+	cmd.Flags().BoolVar(&tui, "tui", false, "use TUI selection")
+	cmd.Flags().BoolVar(&noTui, "no-tui", false, "disable TUI selection even when omitted by future defaults")
 	cmd.Flags().StringVar(&createPath, "path", "", "worktree path for --create")
 	cmd.Flags().StringVar(&createRoot, "root", "", "worktree root for --create default path resolution")
 	cmd.Flags().StringVar(&createFrom, "from", "", "start point for --create (default: origin/<branch> if exists, else origin/HEAD or main)")
 
 	return cmd
+}
+
+func validatePathMode(query string, create bool, tui bool, noTui bool, createPath string, createRoot string, createFrom string) error {
+	if tui && noTui {
+		return usageError(fmt.Errorf("wt path: --tui and --no-tui cannot be combined"))
+	}
+	if query == "" && create {
+		return usageError(fmt.Errorf("wt path: query cannot be empty"))
+	}
+	if tui && create {
+		return usageError(fmt.Errorf("wt path: --tui cannot be combined with --create"))
+	}
+	if query == "" && noTui {
+		return usageError(fmt.Errorf("wt path: query is required when --no-tui is set"))
+	}
+	if !create {
+		if strings.TrimSpace(createPath) != "" {
+			return usageError(fmt.Errorf("wt path: --path requires --create"))
+		}
+		if strings.TrimSpace(createRoot) != "" {
+			return usageError(fmt.Errorf("wt path: --root requires --create"))
+		}
+		if strings.TrimSpace(createFrom) != "" {
+			return usageError(fmt.Errorf("wt path: --from requires --create"))
+		}
+	}
+	return nil
 }
 
 func completePathQuery(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

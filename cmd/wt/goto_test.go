@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"wt/internal/runner"
+	"wt/internal/tui/picker"
+	"wt/internal/worktree"
 )
 
 func TestPath_PrintsOnlyPath(t *testing.T) {
@@ -473,5 +475,220 @@ branch refs/heads/main
 	}
 	if stdout.String() != "/alt-root/feature-x\n" {
 		t.Fatalf("stdout = %q, want only path", stdout.String())
+	}
+}
+
+func TestPathTUI_RequiresTTY(t *testing.T) {
+	t.Parallel()
+
+	root := newRootCmd()
+	root.SetArgs([]string{"path", "--tui"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		CanUseTUI: func() bool { return false },
+	}))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var exitErr *exitError
+	if !errors.As(err, &exitErr) || exitErr.Code != 2 {
+		t.Fatalf("err = %#v, want exitError code 2", err)
+	}
+	if !strings.Contains(err.Error(), "--tui requires a TTY") {
+		t.Fatalf("err = %q, want TTY guidance", err.Error())
+	}
+}
+
+func TestPathTUI_UsesPickerSelection(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree /repo/.wt/feature-x
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+`) + "\n"
+
+	r := &fakeRunner{
+		t: t,
+		calls: []fakeCall{
+			{
+				workDir: cwd,
+				name:    "git",
+				args:    []string{"rev-parse", "--show-toplevel"},
+				res: runner.Result{
+					Stdout:   []byte(repo + "\n"),
+					ExitCode: 0,
+				},
+			},
+			{
+				workDir: repo,
+				name:    "git",
+				args:    []string{"worktree", "list", "--porcelain"},
+				res: runner.Result{
+					Stdout:   []byte(porcelain),
+					ExitCode: 0,
+				},
+			},
+		},
+	}
+
+	root := newRootCmd()
+	var stdout, stderr bytes.Buffer
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs([]string{"path", "feature", "--tui"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner:    r,
+		Cwd:       cwd,
+		CanUseTUI: func() bool { return true },
+		PickWorktree: func(_ *cobra.Command, wts []worktree.Worktree, initialFilter string) (worktree.Worktree, error) {
+			if initialFilter != "feature" {
+				t.Fatalf("initialFilter = %q, want %q", initialFilter, "feature")
+			}
+			if len(wts) != 2 {
+				t.Fatalf("len(wts) = %d, want 2", len(wts))
+			}
+			return wts[1], nil
+		},
+	}))
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+	if stdout.String() != "/repo/.wt/feature-x\n" {
+		t.Fatalf("stdout = %q, want only path", stdout.String())
+	}
+}
+
+func TestPathTUI_CancelReturnsExit130(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+	porcelain := strings.TrimSpace(`
+worktree /repo/.wt/feature-x
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+`) + "\n"
+
+	root := newRootCmd()
+	root.SetArgs([]string{"path", "--tui"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+			},
+		},
+		Cwd:       cwd,
+		CanUseTUI: func() bool { return true },
+		PickWorktree: func(_ *cobra.Command, _ []worktree.Worktree, _ string) (worktree.Worktree, error) {
+			return worktree.Worktree{}, picker.ErrCancelled
+		},
+	}))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var exitErr *exitError
+	if !errors.As(err, &exitErr) || exitErr.Code != 130 {
+		t.Fatalf("err = %#v, want exitError code 130", err)
+	}
+	if err.Error() != "wt path: selection cancelled" {
+		t.Fatalf("err = %q, want cancellation message", err.Error())
+	}
+}
+
+func TestPathRejectsCreateOnlyFlagsWithoutCreate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{
+			name: "path flag",
+			args: []string{"path", "feature-x", "--path", "/tmp/feature-x"},
+			want: "wt path: --path requires --create",
+		},
+		{
+			name: "root flag",
+			args: []string{"path", "feature-x", "--root", "/tmp"},
+			want: "wt path: --root requires --create",
+		},
+		{
+			name: "from flag",
+			args: []string{"path", "feature-x", "--from", "origin/main"},
+			want: "wt path: --from requires --create",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := newRootCmd()
+			root.SetArgs(tt.args)
+			root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{}))
+
+			err := root.Execute()
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+
+			var exitErr *exitError
+			if !errors.As(err, &exitErr) || exitErr.Code != 2 {
+				t.Fatalf("err = %#v, want exitError code 2", err)
+			}
+			if err.Error() != tt.want {
+				t.Fatalf("err = %q, want %q", err.Error(), tt.want)
+			}
+		})
+	}
+}
+
+func TestPathRejectsNoTUIWithoutQuery(t *testing.T) {
+	t.Parallel()
+
+	root := newRootCmd()
+	root.SetArgs([]string{"path", "--no-tui"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{}))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var exitErr *exitError
+	if !errors.As(err, &exitErr) || exitErr.Code != 2 {
+		t.Fatalf("err = %#v, want exitError code 2", err)
+	}
+	if err.Error() != "wt path: query is required when --no-tui is set" {
+		t.Fatalf("err = %q, want no-tui guidance", err.Error())
 	}
 }
