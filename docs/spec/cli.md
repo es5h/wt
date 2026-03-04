@@ -72,6 +72,7 @@
 
 규칙:
 - 기본 모드는 **경로만 출력**한다(추가 텍스트/색상 금지).
+- `query` 없이 실행하려면 `--tui`가 필요하다.
 - 후보가 0개면 non-zero exit + stderr에 후보/가이드 출력.
 - 후보가 1개면 자동 선택.
 - 후보가 2개 이상이면:
@@ -84,13 +85,20 @@
 - `--path <dir>`: `--create` 시 생성 경로를 직접 지정
 - `--root <dir>`: `--create` 시 기본 생성 경로의 root 지정. 우선순위는 `--root` > `WT_ROOT` > repo-local git config `wt.root` > `<primary-root>/.wt`
 - `--from <ref>`: `--create` 시 새 브랜치의 start point 지정(기본: `origin/<branch>`가 있으면 그걸 사용, 없으면 `origin/HEAD` 또는 `main`)
-- `--tui`: 후보가 여러 개면 TUI로 선택(비-interactive 환경이면 에러)
+- `--tui`: worktree 목록을 TUI로 선택(비-TTY 환경이면 에러)
 - `--no-tui`: 후보가 여러 개면 에러(스크립트 안전)
 - `--json`: 선택 결과를 json으로 출력(예: `{path, branch, reason}`)
 
 현재 구현 상태:
-- `--tui`는 아직 미구현이며 지정 시 사용법 에러로 종료한다.
-- 후보가 2개 이상이면 기본 동작은 “에러 + 후보 출력”이다(TUI 구현 전까지).
+- `--tui`는 현재 `wt path`에만 연결되어 있다.
+- TUI는 현재 repo의 전체 worktree 목록을 기반으로 단일 선택한다.
+- `wt path <query> --tui`는 query를 초기 filter 값으로 사용한다.
+- TUI는 `stdin` + `stderr`가 둘 다 터미널일 때만 실행한다. 화면은 stderr에 렌더링하고, 최종 선택 path만 stdout으로 출력한다.
+- 취소(`Esc`/`Ctrl+C`) 시 exit code `130`과 함께 명확한 에러를 반환한다.
+- `--tui`와 `--create`는 함께 쓸 수 없다.
+- `--path`, `--root`, `--from`은 `--create`가 있을 때만 허용한다.
+- `query` 없이 `--no-tui`만 주는 조합은 허용하지 않는다.
+- 후보가 2개 이상이고 `--tui`가 없으면 기본 동작은 계속 “에러 + 후보 출력”이다.
 
 TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 

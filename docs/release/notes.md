@@ -3,6 +3,7 @@
 이 문서는 사용자에게 보이는 변경사항을 기록합니다. (README에는 패치 노트를 쓰지 않음)
 
 ## Unreleased
+- 2026-03-05: `wt path --tui`와 공통 TUI picker 기반 추가(현재 repo worktree 단일 선택, 실시간 필터, 화살표/Ctrl+n/Ctrl+p/PageUp/PageDown 이동, 취소 시 exit code `130`; non-TTY에서는 실행 거부, 화면은 stderr에 렌더링)
 - 2026-03-05: `wt cleanup` 추가(`wt list`의 `recommendedAction`을 preview/apply로 연결, 기본 preview-only, `--apply`일 때만 prune/remove 실행, text/JSON 모두 remove 근거에서 로컬 git merged와 hosting merged를 계속 분리)
 - 2026-03-05: fix: linked worktree 안에서 `wt root`가 현재 linked worktree path 대신 primary repo root를 출력하도록 수정
 - 2026-03-05: `wt remove` 추가(기본 `--dry-run` preview-only, `--force`는 즉시 삭제, interactive TTY에서는 확인 프롬프트 지원; current/primary worktree 제거 금지, `prunable` entry는 `wt prune`로 분리)
@@ -16,7 +17,7 @@
 - 2026-03-05: `wt create`와 `wt path --create`가 동일한 worktree root 오버라이드 정책을 공유하도록 리팩터링 (`--root` > `WT_ROOT` > repo-local git config `wt.root` > `<repo>/.wt`)
 - 2026-03-05: `wt list --json --verify` 출력 스키마를 고정해 `pathExists`, `dotGitExists`, `valid`, `mergedIntoBase`, `baseRef`를 항상 포함하도록 조정하고, detached/branch 없음 케이스의 `mergedIntoBase`를 `null`로 명시
 - 2026-03-04: `wt list` 구현(`--json`, `--porcelain`, `--verify`, `--base` 지원)
-- 2026-03-04: `wt path` 구현(`--json` 지원; `--tui`는 미구현)
+- 2026-03-04: `wt path` 구현(`--json` 지원)
 - 2026-03-04: `wt path <query>`에서 “현재 worktree 브랜치”를 동적으로 자동완성 후보로 제공(셸 completion 설치 시)
 - 2026-03-04: `wt init <shell>` 구현(출력-only: rc 자동 수정 없음)
 - 2026-03-04: `wt create <branch>` 구현 + `wt path --create`로 “없으면 생성 후 이동” 지원

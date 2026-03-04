@@ -10,6 +10,7 @@ import (
 
 	"wt/internal/buildinfo"
 	"wt/internal/runner"
+	"wt/internal/worktree"
 )
 
 func main() {
@@ -69,6 +70,8 @@ type deps struct {
 	Runner        runner.Runner
 	Cwd           string
 	IsInteractive func() bool
+	CanUseTUI     func() bool
+	PickWorktree  func(cmd *cobra.Command, wts []worktree.Worktree, initialFilter string) (worktree.Worktree, error)
 }
 
 func ensureDeps(cmd *cobra.Command) error {
@@ -89,6 +92,8 @@ func ensureDeps(cmd *cobra.Command) error {
 		Runner:        runner.OSRunner{Env: os.Environ()},
 		Cwd:           cwd,
 		IsInteractive: stdinIsTTY,
+		CanUseTUI:     stdioCanUseTUI,
+		PickWorktree:  pickWorktreeWithTUI,
 	}
 
 	cmd.SetContext(context.WithValue(ctx, depsKey{}, d))
