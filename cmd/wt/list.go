@@ -73,7 +73,7 @@ func newListCmd() *cobra.Command {
 				if !exists {
 					return usageError(fmt.Errorf("wt list: base ref does not exist: %s", baseRef))
 				}
-				verifyCtx = &listVerifyContext{RepoRoot: repoRoot, BaseRef: baseRef}
+				verifyCtx = &listVerifyContext{RepoRoot: repoRoot, BaseRef: baseRef, VerifyLocal: verify}
 				if verifyHosting {
 					remoteURL, err := git.RemoteURL(ctx, d.Runner, repoRoot, "origin")
 					if err != nil {
@@ -137,17 +137,22 @@ type jsonVerifyFields struct {
 	HostingKind      string
 	MergedViaHosting *bool
 	HostingReason    string
+	HostingNumber    *int
+	HostingTitle     string
+	HostingURL       string
 }
 
 type listVerifyContext struct {
 	RepoRoot        string
 	BaseRef         string
 	RemoteURL       string
+	VerifyLocal     bool
 	VerifyHosting   bool
 	HostingProvider hosting.Provider
 }
 
 type verifyInfo struct {
+	LocalVerified    bool
 	PathExists       bool
 	DotGitExists     bool
 	Valid            bool
@@ -157,6 +162,9 @@ type verifyInfo struct {
 	HostingKind      string
 	MergedViaHosting *bool
 	HostingReason    string
+	HostingNumber    *int
+	HostingTitle     string
+	HostingURL       string
 }
 
 func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
@@ -172,15 +180,18 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 		LockReason  string `json:"lockReason,omitempty"`
 		PruneReason string `json:"pruneReason,omitempty"`
 
-		PathExists       *bool  `json:"pathExists,omitempty"`
-		DotGitExists     *bool  `json:"dotGitExists,omitempty"`
-		Valid            *bool  `json:"valid,omitempty"`
-		MergedIntoBase   *bool  `json:"mergedIntoBase,omitempty"`
-		BaseRef          string `json:"baseRef,omitempty"`
-		HostingProvider  string `json:"hostingProvider,omitempty"`
-		HostingKind      string `json:"hostingKind,omitempty"`
-		MergedViaHosting *bool  `json:"mergedViaHosting,omitempty"`
-		HostingReason    string `json:"hostingReason,omitempty"`
+		PathExists          *bool  `json:"pathExists,omitempty"`
+		DotGitExists        *bool  `json:"dotGitExists,omitempty"`
+		Valid               *bool  `json:"valid,omitempty"`
+		MergedIntoBase      *bool  `json:"mergedIntoBase,omitempty"`
+		BaseRef             string `json:"baseRef,omitempty"`
+		HostingProvider     string `json:"hostingProvider,omitempty"`
+		HostingKind         string `json:"hostingKind,omitempty"`
+		MergedViaHosting    *bool  `json:"mergedViaHosting,omitempty"`
+		HostingReason       string `json:"hostingReason,omitempty"`
+		HostingChangeNumber *int   `json:"hostingChangeNumber,omitempty"`
+		HostingChangeTitle  string `json:"hostingChangeTitle,omitempty"`
+		HostingChangeURL    string `json:"hostingChangeUrl,omitempty"`
 	}
 
 	out := baseJSONWorktree{
@@ -194,18 +205,23 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 		PruneReason: jwt.PruneReason,
 	}
 	if jwt.Verify != nil {
-		out.PathExists = &jwt.Verify.PathExists
-		out.DotGitExists = &jwt.Verify.DotGitExists
-		out.Valid = &jwt.Verify.Valid
-		out.MergedIntoBase = jwt.Verify.MergedIntoBase
-		out.BaseRef = jwt.Verify.BaseRef
+		if jwt.Verify.MergedIntoBase != nil || jwt.Verify.BaseRef != "" {
+			out.PathExists = &jwt.Verify.PathExists
+			out.DotGitExists = &jwt.Verify.DotGitExists
+			out.Valid = &jwt.Verify.Valid
+			out.MergedIntoBase = jwt.Verify.MergedIntoBase
+			out.BaseRef = jwt.Verify.BaseRef
+		}
 		out.HostingProvider = jwt.Verify.HostingProvider
 		out.HostingKind = jwt.Verify.HostingKind
 		out.MergedViaHosting = jwt.Verify.MergedViaHosting
 		out.HostingReason = jwt.Verify.HostingReason
+		out.HostingChangeNumber = jwt.Verify.HostingNumber
+		out.HostingChangeTitle = jwt.Verify.HostingTitle
+		out.HostingChangeURL = jwt.Verify.HostingURL
 	}
 
-	if jwt.Verify != nil && (jwt.Verify.MergedIntoBase == nil || jwt.Verify.HostingProvider != "") {
+	if jwt.Verify != nil && (jwt.Verify.MergedIntoBase == nil || jwt.Verify.HostingProvider != "" || jwt.Verify.BaseRef == "") {
 		outMap := map[string]any{
 			"path":     jwt.Path,
 			"head":     jwt.HEAD,
@@ -220,17 +236,28 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 		if jwt.PruneReason != "" {
 			outMap["pruneReason"] = jwt.PruneReason
 		}
-		outMap["pathExists"] = jwt.Verify.PathExists
-		outMap["dotGitExists"] = jwt.Verify.DotGitExists
-		outMap["valid"] = jwt.Verify.Valid
-		outMap["mergedIntoBase"] = jwt.Verify.MergedIntoBase
-		outMap["baseRef"] = jwt.Verify.BaseRef
+		if jwt.Verify.MergedIntoBase != nil || jwt.Verify.BaseRef != "" {
+			outMap["pathExists"] = jwt.Verify.PathExists
+			outMap["dotGitExists"] = jwt.Verify.DotGitExists
+			outMap["valid"] = jwt.Verify.Valid
+			outMap["mergedIntoBase"] = jwt.Verify.MergedIntoBase
+			outMap["baseRef"] = jwt.Verify.BaseRef
+		}
 		if jwt.Verify.HostingProvider != "" {
 			outMap["hostingProvider"] = jwt.Verify.HostingProvider
 			outMap["hostingKind"] = jwt.Verify.HostingKind
 			outMap["mergedViaHosting"] = jwt.Verify.MergedViaHosting
 			if jwt.Verify.HostingReason != "" {
 				outMap["hostingReason"] = jwt.Verify.HostingReason
+			}
+			if jwt.Verify.HostingNumber != nil {
+				outMap["hostingChangeNumber"] = jwt.Verify.HostingNumber
+			}
+			if jwt.Verify.HostingTitle != "" {
+				outMap["hostingChangeTitle"] = jwt.Verify.HostingTitle
+			}
+			if jwt.Verify.HostingURL != "" {
+				outMap["hostingChangeUrl"] = jwt.Verify.HostingURL
 			}
 		}
 		return json.Marshal(outMap)
@@ -265,6 +292,9 @@ func toJSONWorktrees(cmd *cobra.Command, d *deps, wts []worktree.Worktree, verif
 					HostingKind:      info.HostingKind,
 					MergedViaHosting: info.MergedViaHosting,
 					HostingReason:    info.HostingReason,
+					HostingNumber:    info.HostingNumber,
+					HostingTitle:     info.HostingTitle,
+					HostingURL:       info.HostingURL,
 				}
 			}
 		}
@@ -295,18 +325,25 @@ func verifyWorktreeWithContext(ctx context.Context, d *deps, verifyCtx *listVeri
 	valid := pathExists && dotGitExists && !wt.Prunable
 
 	var merged *bool
-	if d != nil && wt.Branch != "" && !wt.Detached {
+	baseRef := ""
+	if verifyCtx.VerifyLocal && d != nil && wt.Branch != "" && !wt.Detached {
 		isMerged, err := git.IsAncestor(ctx, d.Runner, verifyCtx.RepoRoot, wt.Branch, verifyCtx.BaseRef)
 		if err != nil {
 			return nil, err
 		}
 		merged = &isMerged
+		baseRef = verifyCtx.BaseRef
+	} else if verifyCtx.VerifyLocal {
+		baseRef = verifyCtx.BaseRef
 	}
 
 	var hostingMerged *bool
 	hostingProvider := ""
 	hostingKind := ""
 	hostingReason := ""
+	var hostingNumber *int
+	hostingTitle := ""
+	hostingURL := ""
 	if verifyCtx.VerifyHosting {
 		hostingProvider = string(verifyCtx.HostingProvider)
 		if verifyCtx.HostingProvider == hosting.ProviderGitHub {
@@ -325,19 +362,26 @@ func verifyWorktreeWithContext(ctx context.Context, d *deps, verifyCtx *listVeri
 			hostingKind = result.Kind
 			hostingMerged = result.Merged
 			hostingReason = result.Reason
+			hostingNumber = result.Number
+			hostingTitle = result.Title
+			hostingURL = result.URL
 		}
 	}
 
 	return &verifyInfo{
+		LocalVerified:    verifyCtx.VerifyLocal,
 		PathExists:       pathExists,
 		DotGitExists:     dotGitExists,
-		Valid:            valid,
+		Valid:            verifyCtx.VerifyLocal && valid,
 		MergedIntoBase:   merged,
-		BaseRef:          verifyCtx.BaseRef,
+		BaseRef:          baseRef,
 		HostingProvider:  hostingProvider,
 		HostingKind:      hostingKind,
 		MergedViaHosting: hostingMerged,
 		HostingReason:    hostingReason,
+		HostingNumber:    hostingNumber,
+		HostingTitle:     hostingTitle,
+		HostingURL:       hostingURL,
 	}, nil
 }
 
@@ -359,13 +403,13 @@ func formatWorktreeLine(wt worktree.Worktree, info *verifyInfo) string {
 	}
 
 	if info != nil {
-		if !info.PathExists {
+		if info.LocalVerified && !info.PathExists {
 			flags = append(flags, "missing-path")
 		}
-		if !info.DotGitExists {
+		if info.LocalVerified && !info.DotGitExists {
 			flags = append(flags, "missing-git")
 		}
-		if info.MergedIntoBase != nil && *info.MergedIntoBase {
+		if info.LocalVerified && info.MergedIntoBase != nil && *info.MergedIntoBase {
 			flags = append(flags, "merged")
 		}
 		if info.MergedViaHosting != nil && *info.MergedViaHosting {

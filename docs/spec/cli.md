@@ -20,6 +20,8 @@
 - `--verify`: worktree entry 검증(경로/.git 존재 + base ref 기준 merged 여부)
   - `--base <ref>`: `--verify`의 base ref 지정(기본: `origin/HEAD` 또는 `main`)
 - `--verify-hosting`: 호스팅(PR/MR) 기준 merged 여부를 추가 검증
+  - `--verify`와 배타적이지 않다. 둘을 함께 쓰면 로컬 git 검증과 호스팅 검증을 둘 다 표시한다.
+  - `--verify-hosting`만 쓰면 호스팅 필드만 추가하고, `pathExists`/`dotGitExists`/`valid`/`mergedIntoBase`는 포함하지 않는다.
   - 현재 범위(in-scope): GitHub만 지원 (`gh` CLI + `gh auth status` 필요)
   - `gh` 탐색 순서: `WT_GH_BIN` > `PATH`
   - 현재 범위(out-of-scope): GitLab API/`glab` 연동, 자동 로그인, 자동 fetch
@@ -29,7 +31,7 @@
 - 로컬 git 기준 `[merged]`는 `git merge-base --is-ancestor <branch> <base>` 의미를 유지한다.
 - 호스팅 기준 merged는 별도 필드/마커로 분리한다:
   - 텍스트: `[merged-hosting:<provider>]`
-  - JSON: `hostingProvider`, `hostingKind`, `mergedViaHosting`, `hostingReason`
+  - JSON: `hostingProvider`, `hostingKind`, `mergedViaHosting`, `hostingReason`, `hostingChangeNumber`, `hostingChangeTitle`, `hostingChangeUrl`
 - provider 감지는 `origin` remote URL 기준 자동 감지다.
 - GitLab remote는 현재 `hostingProvider=gitlab`, `hostingKind=mr`, `mergedViaHosting=null`, `hostingReason=unsupported-provider`로 반환한다.
 

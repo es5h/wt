@@ -23,6 +23,9 @@ type VerifyResult struct {
 	Kind     string
 	Merged   *bool
 	Reason   string
+	Number   *int
+	Title    string
+	URL      string
 }
 
 func DetectProvider(remoteURL string) Provider {
@@ -62,7 +65,7 @@ func verifyGitHubMerged(ctx context.Context, r runner.Runner, repoRoot string, b
 		return VerifyResult{Provider: ProviderGitHub, Kind: "pr", Reason: "gh-auth-unavailable"}, nil
 	}
 
-	args := []string{"pr", "list", "--state", "merged", "--head", branch, "--json", "number", "--limit", "1"}
+	args := []string{"pr", "list", "--state", "merged", "--head", branch, "--json", "number,title,url", "--limit", "1"}
 	if shortBase := shortRefName(baseRef); shortBase != "" {
 		args = append(args, "--base", shortBase)
 	}
@@ -73,14 +76,22 @@ func verifyGitHubMerged(ctx context.Context, r runner.Runner, repoRoot string, b
 	}
 
 	var prs []struct {
-		Number int `json:"number"`
+		Number int    `json:"number"`
+		Title  string `json:"title"`
+		URL    string `json:"url"`
 	}
 	if err := json.Unmarshal(res.Stdout, &prs); err != nil {
 		return VerifyResult{Provider: ProviderGitHub, Kind: "pr", Reason: "gh-invalid-json"}, nil
 	}
 
 	merged := len(prs) > 0
-	return VerifyResult{Provider: ProviderGitHub, Kind: "pr", Merged: &merged}, nil
+	result := VerifyResult{Provider: ProviderGitHub, Kind: "pr", Merged: &merged}
+	if merged {
+		result.Number = &prs[0].Number
+		result.Title = strings.TrimSpace(prs[0].Title)
+		result.URL = strings.TrimSpace(prs[0].URL)
+	}
+	return result, nil
 }
 
 func findGitHubCLI() (string, bool) {

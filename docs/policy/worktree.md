@@ -54,10 +54,12 @@ repo-local git config 예시:
 
 현재 in-scope:
 - `wt list --verify-hosting`
+- `--verify`와 독립적으로 동작하는 호스팅 전용 검증 필드
 - provider 자동 감지(`origin` remote URL 기준)
 - GitHub만 실제 조회 지원 (`gh` CLI + 로그인된 세션 필요)
 - `gh` 바이너리는 `WT_GH_BIN`, `PATH` 순서로만 탐색
 - 실패 시 hard error 대신 결과를 `null` + reason으로 반환
+- merged 확인 성공 시 change metadata(number/title/url) 반환
 
 현재 out-of-scope:
 - GitLab 실제 조회 (`glab`/API)
@@ -66,4 +68,4 @@ repo-local git config 예시:
 
 의도:
 - squash merge 환경에서 로컬 git `[merged]`와 GitHub PR merged 여부가 다를 수 있으므로, 의미를 분리해 사용자에게 명확히 보여준다.
-- 텍스트 출력 마커는 provider 일반형(`[merged-hosting:<provider>]`)을 사용하고, 상세 의미는 JSON(`hostingProvider`, `hostingKind`)에 둔다.
+- 텍스트 출력 마커는 provider 일반형(`[merged-hosting:<provider>]`)을 사용하고, 상세 의미는 JSON(`hostingProvider`, `hostingKind`, `hostingChangeNumber`, `hostingChangeTitle`, `hostingChangeUrl`)에 둔다.

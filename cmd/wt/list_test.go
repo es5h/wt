@@ -422,8 +422,8 @@ branch refs/heads/feature-x
 				{
 					workDir: repo,
 					name:    ghBin,
-					args:    []string{"pr", "list", "--state", "merged", "--head", "feature-x", "--json", "number", "--limit", "1", "--base", "main"},
-					res:     runner.Result{Stdout: []byte(`[{"number":1}]`), ExitCode: 0},
+					args:    []string{"pr", "list", "--state", "merged", "--head", "feature-x", "--json", "number,title,url", "--limit", "1", "--base", "main"},
+					res:     runner.Result{Stdout: []byte(`[{"number":1,"title":"merged feature","url":"https://github.com/es5h/wt/pull/1"}]`), ExitCode: 0},
 				},
 				{
 					workDir: repo,
@@ -441,8 +441,8 @@ branch refs/heads/feature-x
 				{
 					workDir: repo,
 					name:    ghBin,
-					args:    []string{"pr", "list", "--state", "merged", "--head", "feature-x", "--json", "number", "--limit", "1", "--base", "main"},
-					res:     runner.Result{Stdout: []byte(`[{"number":1}]`), ExitCode: 0},
+					args:    []string{"pr", "list", "--state", "merged", "--head", "feature-x", "--json", "number,title,url", "--limit", "1", "--base", "main"},
+					res:     runner.Result{Stdout: []byte(`[{"number":1,"title":"merged feature","url":"https://github.com/es5h/wt/pull/1"}]`), ExitCode: 0},
 				},
 			},
 		},
@@ -458,6 +458,97 @@ branch refs/heads/feature-x
 	}
 	if !strings.Contains(stdout.String(), "[merged-hosting:github]") {
 		t.Fatalf("stdout = %q, want merged-hosting:github marker", stdout.String())
+	}
+}
+
+func TestList_VerifyHosting_JSONIncludesChangeMetadataOnly(t *testing.T) {
+	const cwd = "/cwd"
+	const repo = "/repo"
+	const ghBin = "/mock/bin/gh"
+	t.Setenv("WT_GH_BIN", ghBin)
+
+	wtPath := filepath.Join(t.TempDir(), "feature-x")
+	if err := os.MkdirAll(filepath.Join(wtPath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create .git dir: %v", err)
+	}
+
+	porcelain := strings.TrimSpace(`
+worktree `+wtPath+`
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+`) + "\n"
+
+	cmd, stdout, stderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{Stdout: []byte("git@github.com:es5h/wt.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    ghBin,
+					args:    []string{"auth", "status"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    ghBin,
+					args:    []string{"pr", "list", "--state", "merged", "--head", "feature-x", "--json", "number,title,url", "--limit", "1", "--base", "main"},
+					res:     runner.Result{Stdout: []byte(`[{"number":42,"title":"feature x","url":"https://github.com/es5h/wt/pull/42"}]`), ExitCode: 0},
+				},
+			},
+		},
+		Cwd: cwd,
+	})
+
+	cmd.SetArgs([]string{"--json", "--verify-hosting", "--base", "main"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+
+	got := decodeJSONObjects(t, stdout.Bytes())
+	if len(got) != 1 {
+		t.Fatalf("len(json) = %d, want 1", len(got))
+	}
+	if _, ok := got[0]["mergedIntoBase"]; ok {
+		t.Fatalf("mergedIntoBase should be absent when only --verify-hosting is used: %#v", got[0])
+	}
+	if got[0]["mergedViaHosting"] != true {
+		t.Fatalf("mergedViaHosting = %#v, want true", got[0]["mergedViaHosting"])
+	}
+	if got[0]["hostingChangeNumber"] != float64(42) {
+		t.Fatalf("hostingChangeNumber = %#v, want 42", got[0]["hostingChangeNumber"])
+	}
+	if got[0]["hostingChangeTitle"] != "feature x" {
+		t.Fatalf("hostingChangeTitle = %#v, want feature x", got[0]["hostingChangeTitle"])
+	}
+	if got[0]["hostingChangeUrl"] != "https://github.com/es5h/wt/pull/42" {
+		t.Fatalf("hostingChangeUrl = %#v, want PR URL", got[0]["hostingChangeUrl"])
 	}
 }
 
@@ -508,13 +599,6 @@ branch refs/heads/feature-x
 				},
 				{
 					workDir: repo,
-					name:    "git",
-					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-x", "main"},
-					res:     runner.Result{ExitCode: 1},
-					err:     errors.New("exit 1"),
-				},
-				{
-					workDir: repo,
 					name:    ghBin,
 					args:    []string{"auth", "status"},
 					res:     runner.Result{ExitCode: 1},
@@ -548,6 +632,9 @@ branch refs/heads/feature-x
 	}
 	if got[0]["hostingReason"] != "gh-auth-unavailable" {
 		t.Fatalf("hostingReason = %#v, want gh-auth-unavailable", got[0]["hostingReason"])
+	}
+	if _, ok := got[0]["mergedIntoBase"]; ok {
+		t.Fatalf("mergedIntoBase should be absent when only --verify-hosting is used: %#v", got[0])
 	}
 }
 
@@ -596,20 +683,6 @@ branch refs/heads/feature-x
 					name:    "git",
 					args:    []string{"remote", "get-url", "origin"},
 					res:     runner.Result{Stdout: []byte("git@github.com:es5h/wt.git\n"), ExitCode: 0},
-				},
-				{
-					workDir: repo,
-					name:    "git",
-					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-x", "main"},
-					res:     runner.Result{ExitCode: 1},
-					err:     errors.New("exit 1"),
-				},
-				{
-					workDir: repo,
-					name:    "git",
-					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-x", "main"},
-					res:     runner.Result{ExitCode: 1},
-					err:     errors.New("exit 1"),
 				},
 			},
 		},
@@ -672,13 +745,6 @@ branch refs/heads/feature-x
 					name:    "git",
 					args:    []string{"remote", "get-url", "origin"},
 					res:     runner.Result{Stdout: []byte("git@gitlab.com:team/wt.git\n"), ExitCode: 0},
-				},
-				{
-					workDir: repo,
-					name:    "git",
-					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-x", "main"},
-					res:     runner.Result{ExitCode: 1},
-					err:     errors.New("exit 1"),
 				},
 			},
 		},
