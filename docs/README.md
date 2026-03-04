@@ -18,3 +18,6 @@
 
 ## Release
 - `docs/release/notes.md`
+
+## Contributing
+- `docs/pr-guidelines.md`
