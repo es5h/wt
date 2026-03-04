@@ -26,12 +26,12 @@ init: ## Create local cache dirs
 
 .PHONY: fmt
 fmt: ## Run gofmt (writes files)
-	@files="$$(find . -name '*.go' -not -path './.cache/*')"; \
+	@files="$$(find . -name '*.go' -not -path './.cache/*' -not -path './.wt/*')"; \
 	if [ -n "$$files" ]; then $(GOENV) gofmt -w $$files; fi
 
 .PHONY: fmt-check
 fmt-check: ## Verify gofmt is clean
-	@files="$$(find . -name '*.go' -not -path './.cache/*')"; \
+	@files="$$(find . -name '*.go' -not -path './.cache/*' -not -path './.wt/*')"; \
 	if [ -z "$$files" ]; then exit 0; fi; \
 	out="$$(gofmt -l $$files)"; \
 	if [ -n "$$out" ]; then echo "gofmt needed:"; echo "$$out"; exit 1; fi

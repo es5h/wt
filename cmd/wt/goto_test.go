@@ -132,7 +132,7 @@ branch refs/heads/feature-x
 }
 
 func TestGotoCompletion_SuggestsWorktreeBranches(t *testing.T) {
-	t.Parallel()
+	t.Setenv("WT_GOTO_COMPLETE_REMOTE", "0")
 
 	const cwd = "/cwd"
 	const repo = "/repo"
@@ -185,7 +185,7 @@ branch refs/heads/feature-x
 }
 
 func TestGotoCompletion_FiltersByPrefix(t *testing.T) {
-	t.Parallel()
+	t.Setenv("WT_GOTO_COMPLETE_REMOTE", "0")
 
 	const cwd = "/cwd"
 	const repo = "/repo"
