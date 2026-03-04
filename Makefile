@@ -46,7 +46,7 @@ fix-diff: init ## Show go fix patch (no writes)
 
 .PHONY: fix-check
 fix-check: init ## Verify go fix is clean
-	@out="$$( $(GOENV) go fix -diff ./... 2>&1 )"; if [ -n "$$out" ]; then echo "$$out"; echo; echo "go fix needed: run 'make fix'"; exit 1; fi
+	@out="$$( $(GOENV) go fix -diff ./... )"; if [ -n "$$out" ]; then echo "$$out"; echo; echo "go fix needed: run 'make fix'"; exit 1; fi
 
 .PHONY: check
 check: init fmt-check fix-check ## Run required checks
