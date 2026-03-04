@@ -74,13 +74,16 @@ func createWorktree(ctx context.Context, d *deps, repoRoot string, primaryRoot s
 	if err != nil {
 		return "", err
 	}
-	return createWorktreeFromList(ctx, d, repoRoot, primaryRoot, branch, opts, wts)
+	return createWorktreeFromList(ctx, d, repoRoot, primaryRoot, "wt create", branch, opts, wts)
 }
 
-func createWorktreeFromList(ctx context.Context, d *deps, repoRoot string, primaryRoot string, branch string, opts createOpts, wts []worktree.Worktree) (string, error) {
+func createWorktreeFromList(ctx context.Context, d *deps, repoRoot string, primaryRoot string, commandName string, branch string, opts createOpts, wts []worktree.Worktree) (string, error) {
 	branch = strings.TrimSpace(branch)
 	if branch == "" {
 		return "", usageError(fmt.Errorf("wt create: branch cannot be empty"))
+	}
+	if err := ensureCreateQuerySafe(commandName, branch, branch, wts); err != nil {
+		return "", err
 	}
 
 	targetPath, err := resolveCreateTargetPath(ctx, d, repoRoot, primaryRoot, branch, opts)
@@ -157,4 +160,61 @@ func safeBranchPathPart(branch string) (string, error) {
 		return "", fmt.Errorf("wt create: unsupported branch for default path: %q", branch)
 	}
 	return p, nil
+}
+
+func normalizeCreateBranch(query string, from string) string {
+	branch := strings.TrimSpace(query)
+	if strings.TrimSpace(from) != "" {
+		return branch
+	}
+
+	if after, ok := strings.CutPrefix(branch, "origin/"); ok && strings.TrimSpace(after) != "" {
+		return after
+	}
+	return branch
+}
+
+func ensureCreateQuerySafe(commandName string, query string, branch string, wts []worktree.Worktree) error {
+	conflict, ok := findCreatePrunableConflict(query, branch, wts)
+	if !ok {
+		return nil
+	}
+
+	return &exitError{
+		Code: 1,
+		Err:  fmt.Errorf("%s: registered worktree entry is prunable; run 'wt prune --apply' first: %s (%s)", commandName, conflict.Path, displayBranch(conflict)),
+	}
+}
+
+func findCreatePrunableConflict(query string, branch string, wts []worktree.Worktree) (worktree.Worktree, bool) {
+	branch = strings.TrimSpace(branch)
+	query = strings.TrimSpace(query)
+	branchRef := ""
+	if branch != "" {
+		branchRef = "refs/heads/" + branch
+	}
+
+	for _, wt := range wts {
+		if !wt.Prunable {
+			continue
+		}
+		if branchRef != "" && wt.Branch == branchRef {
+			return wt, true
+		}
+	}
+
+	if query == "" {
+		return worktree.Worktree{}, false
+	}
+
+	for _, wt := range wts {
+		if !wt.Prunable {
+			continue
+		}
+		if len(matchWorktrees([]worktree.Worktree{wt}, query)) > 0 {
+			return wt, true
+		}
+	}
+
+	return worktree.Worktree{}, false
 }

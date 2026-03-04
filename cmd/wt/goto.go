@@ -86,17 +86,18 @@ func newPathCmd() *cobra.Command {
 				return nil
 			}
 
+			branch := ""
+			if create {
+				branch = normalizeCreateBranch(query, createFrom)
+				if err := ensureCreateQuerySafe("wt path", query, branch, wts); err != nil {
+					return err
+				}
+			}
+
 			matches := matchWorktrees(wts, query)
 			if len(matches) == 0 {
 				if !create {
 					return &exitError{Code: 1, Err: fmt.Errorf("wt path: no matches for %q", query)}
-				}
-
-				branch := query
-				if strings.TrimSpace(createFrom) == "" {
-					if after, ok := strings.CutPrefix(branch, "origin/"); ok && strings.TrimSpace(after) != "" {
-						branch = after
-					}
 				}
 
 				primaryRoot, err := git.PrimaryWorktreeRoot(ctx, d.Runner, repoRoot)
@@ -104,7 +105,7 @@ func newPathCmd() *cobra.Command {
 					return err
 				}
 
-				path, err := createWorktreeFromList(ctx, d, repoRoot, primaryRoot, branch, createOpts{
+				path, err := createWorktreeFromList(ctx, d, repoRoot, primaryRoot, "wt path", branch, createOpts{
 					Path: createPath,
 					Root: createRoot,
 					From: createFrom,

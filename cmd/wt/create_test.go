@@ -123,7 +123,7 @@ branch refs/heads/main
 	}
 }
 
-func TestCreate_ExistingBranch(t *testing.T) {
+func TestCreate_LocalBranchExistsButNoLiveWorktree(t *testing.T) {
 	t.Parallel()
 
 	const cwd = "/cwd"
@@ -207,6 +207,80 @@ branch refs/heads/main
 	}
 	if stdout.String() != "/repo/.wt/feature-x\n" {
 		t.Fatalf("stdout = %q, want only path", stdout.String())
+	}
+}
+
+func TestCreate_FailsWhenPrunableEntryExists(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree /repo/.wt/feature-x
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+prunable gitdir file points to non-existent location
+`) + "\n"
+
+	r := &fakeRunner{
+		t: t,
+		calls: []fakeCall{
+			{
+				workDir: cwd,
+				name:    "git",
+				args:    []string{"rev-parse", "--show-toplevel"},
+				res: runner.Result{
+					Stdout:   []byte(repo + "\n"),
+					ExitCode: 0,
+				},
+			},
+			{
+				workDir: repo,
+				name:    "git",
+				args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+				res: runner.Result{
+					Stdout:   []byte("/repo/.git\n"),
+					ExitCode: 0,
+				},
+			},
+			{
+				workDir: repo,
+				name:    "git",
+				args:    []string{"worktree", "list", "--porcelain"},
+				res: runner.Result{
+					Stdout:   []byte(porcelain),
+					ExitCode: 0,
+				},
+			},
+		},
+	}
+
+	root := newRootCmd()
+	var stdout, stderr bytes.Buffer
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs([]string{"create", "feature-x"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{Runner: r, Cwd: cwd}))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("Execute() error = nil, want error")
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+	if !strings.Contains(err.Error(), "registered worktree entry is prunable") {
+		t.Fatalf("error = %v, want prunable guidance", err)
+	}
+	if !strings.Contains(err.Error(), "wt prune --apply") {
+		t.Fatalf("error = %v, want prune guidance", err)
 	}
 }
 
