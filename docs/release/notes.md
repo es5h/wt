@@ -4,6 +4,8 @@
 
 ## Unreleased
 - 2026-03-05: `wt remove` 추가(기본 `--dry-run` preview-only, `--force`는 즉시 삭제, interactive TTY에서는 확인 프롬프트 지원; current/primary worktree 제거 금지, `prunable` entry는 `wt prune`로 분리)
+- 2026-03-05: `wt root` 추가(기본 stdout path-only, `--json` 시 `{root}` 출력)
+- 2026-03-05: `wt init <shell>` 출력에 `wtr`와 `wcd`를 추가하고, zsh completion bridge가 `wtg`뿐 아니라 `wcd`도 `wt path`처럼 완성하도록 조정
 - 2026-03-05: `wt prune` 추가(기본 preview-only, `--apply`일 때만 `git worktree prune --expire now` 실행, stale/prunable entry 정리용)
 - 2026-03-05: breaking: `wt goto`를 제거하고 `wt path`를 정식 경로 선택 명령으로 사용하도록 정리(하위 호환 alias 없음)
 - 2026-03-05: `wt list --verify-hosting` 추가(GitHub `gh` 기반 opt-in; `[merged-hosting:<provider>]`/`mergedViaHosting`로 로컬 git `[merged]`와 의미 분리, `hostingChangeNumber`/`hostingChangeTitle`/`hostingChangeUrl` 제공, GitLab은 현재 감지만 지원)
