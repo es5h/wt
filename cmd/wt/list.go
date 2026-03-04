@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -88,6 +89,11 @@ func newListCmd() *cobra.Command {
 				enc := json.NewEncoder(cmd.OutOrStdout())
 				enc.SetIndent("", "  ")
 				return enc.Encode(toJSONWorktrees(cmd, d, wts, verifyCtx))
+			}
+
+			hostingNote := formatHostingVerifyNote(wts, d, verifyCtx)
+			if hostingNote != "" {
+				fmt.Fprintln(cmd.ErrOrStderr(), hostingNote)
 			}
 
 			for _, wt := range wts {
@@ -262,6 +268,14 @@ func toJSONWorktrees(cmd *cobra.Command, d *deps, wts []worktree.Worktree, verif
 }
 
 func verifyWorktree(cmd *cobra.Command, d *deps, verifyCtx *listVerifyContext, wt worktree.Worktree) (*verifyInfo, error) {
+	var ctx context.Context
+	if cmd != nil {
+		ctx = cmd.Context()
+	}
+	return verifyWorktreeWithContext(ctx, d, verifyCtx, wt)
+}
+
+func verifyWorktreeWithContext(ctx context.Context, d *deps, verifyCtx *listVerifyContext, wt worktree.Worktree) (*verifyInfo, error) {
 	if verifyCtx == nil {
 		return nil, nil
 	}
@@ -276,7 +290,7 @@ func verifyWorktree(cmd *cobra.Command, d *deps, verifyCtx *listVerifyContext, w
 
 	var merged *bool
 	if d != nil && wt.Branch != "" && !wt.Detached {
-		isMerged, err := git.IsAncestor(cmd.Context(), d.Runner, verifyCtx.RepoRoot, wt.Branch, verifyCtx.BaseRef)
+		isMerged, err := git.IsAncestor(ctx, d.Runner, verifyCtx.RepoRoot, wt.Branch, verifyCtx.BaseRef)
 		if err != nil {
 			return nil, err
 		}
@@ -291,7 +305,7 @@ func verifyWorktree(cmd *cobra.Command, d *deps, verifyCtx *listVerifyContext, w
 		if wt.Branch == "" || wt.Detached {
 			hostingReason = "no-branch"
 		} else {
-			result, err := hosting.VerifyMerged(cmd.Context(), d.Runner, verifyCtx.RepoRoot, verifyCtx.HostingProvider, strings.TrimPrefix(wt.Branch, "refs/heads/"), verifyCtx.BaseRef)
+			result, err := hosting.VerifyMerged(ctx, d.Runner, verifyCtx.RepoRoot, verifyCtx.HostingProvider, strings.TrimPrefix(wt.Branch, "refs/heads/"), verifyCtx.BaseRef)
 			if err != nil {
 				return nil, err
 			}
@@ -349,6 +363,29 @@ func formatWorktreeLine(wt worktree.Worktree, info *verifyInfo) string {
 		return fmt.Sprintf("%s  %s  %s  %s", base, branch, head, wt.Path)
 	}
 	return fmt.Sprintf("%s  %s  %s  %s  [%s]", base, branch, head, wt.Path, strings.Join(flags, ","))
+}
+
+func formatHostingVerifyNote(wts []worktree.Worktree, d *deps, verifyCtx *listVerifyContext) string {
+	if verifyCtx == nil || !verifyCtx.VerifyHosting || d == nil {
+		return ""
+	}
+
+	for _, wt := range wts {
+		info, err := verifyWorktreeWithContext(context.Background(), d, verifyCtx, wt)
+		if err != nil || info == nil {
+			continue
+		}
+		switch info.HostingReason {
+		case "gh-auth-unavailable":
+			return "note: hosting verify skipped (gh not found on PATH / WT_GH_BIN, or not authenticated)"
+		case "unsupported-provider":
+			if info.HostingProvider != "" && info.HostingProvider != string(hosting.ProviderUnknown) {
+				return fmt.Sprintf("note: hosting verify skipped (provider not implemented: %s)", info.HostingProvider)
+			}
+		}
+	}
+
+	return ""
 }
 
 func displayBranch(wt worktree.Worktree) string {

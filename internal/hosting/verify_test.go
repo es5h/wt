@@ -37,44 +37,13 @@ func TestFindGitHubCLI_UsesExplicitEnv(t *testing.T) {
 	}
 }
 
-func TestFindGitHubCLI_UsesGopathFallback(t *testing.T) {
+func TestFindGitHubCLI_ReturnsFalseWhenNotOnPathOrExplicit(t *testing.T) {
 	tempDir := t.TempDir()
-	ghPath := filepath.Join(tempDir, "bin", "gh")
-	if err := writeExecutableStub(ghPath); err != nil {
-		t.Fatalf("writeExecutableStub() error = %v", err)
-	}
-
 	t.Setenv("WT_GH_BIN", "")
-	t.Setenv("PATH", "")
-	t.Setenv("GOPATH", tempDir)
-	t.Setenv("HOME", tempDir)
+	t.Setenv("PATH", tempDir)
 
-	got, ok := findGitHubCLI()
-	if !ok {
-		t.Fatalf("findGitHubCLI() ok = false, want true")
-	}
-	if got != ghPath {
-		t.Fatalf("findGitHubCLI() = %q, want %q", got, ghPath)
-	}
-}
-
-func TestFindGitHubCLI_UsesHomeGoBinFallback(t *testing.T) {
-	tempDir := t.TempDir()
-	ghPath := filepath.Join(tempDir, "go", "bin", "gh")
-	if err := writeExecutableStub(ghPath); err != nil {
-		t.Fatalf("writeExecutableStub() error = %v", err)
-	}
-
-	t.Setenv("WT_GH_BIN", "")
-	t.Setenv("PATH", "")
-	t.Setenv("GOPATH", "")
-	t.Setenv("HOME", tempDir)
-
-	got, ok := findGitHubCLI()
-	if !ok {
-		t.Fatalf("findGitHubCLI() ok = false, want true")
-	}
-	if got != ghPath {
-		t.Fatalf("findGitHubCLI() = %q, want %q", got, ghPath)
+	_, ok := findGitHubCLI()
+	if ok {
+		t.Fatalf("findGitHubCLI() ok = true, want false")
 	}
 }

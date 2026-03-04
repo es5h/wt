@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"wt/internal/runner"
@@ -85,27 +84,11 @@ func verifyGitHubMerged(ctx context.Context, r runner.Runner, repoRoot string, b
 
 func findGitHubCLI() (string, bool) {
 	if explicit := strings.TrimSpace(os.Getenv("WT_GH_BIN")); explicit != "" {
-		if fileExists(explicit) {
-			return explicit, true
-		}
+		return explicit, true
 	}
 
 	if path, err := exec.LookPath("gh"); err == nil {
 		return path, true
-	}
-
-	if gopath := strings.TrimSpace(os.Getenv("GOPATH")); gopath != "" {
-		candidate := filepath.Join(gopath, "bin", "gh")
-		if fileExists(candidate) {
-			return candidate, true
-		}
-	}
-
-	if home, err := os.UserHomeDir(); err == nil && strings.TrimSpace(home) != "" {
-		candidate := filepath.Join(home, "go", "bin", "gh")
-		if fileExists(candidate) {
-			return candidate, true
-		}
 	}
 
 	return "", false

@@ -21,9 +21,9 @@
   - `--base <ref>`: `--verify`의 base ref 지정(기본: `origin/HEAD` 또는 `main`)
 - `--verify-hosting`: 호스팅(PR/MR) 기준 merged 여부를 추가 검증
   - 현재 범위(in-scope): GitHub만 지원 (`gh` CLI + `gh auth status` 필요)
-  - `gh` 탐색 순서: `WT_GH_BIN` > `PATH` > `GOPATH/bin/gh` > `~/go/bin/gh`
+  - `gh` 탐색 순서: `WT_GH_BIN` > `PATH`
   - 현재 범위(out-of-scope): GitLab API/`glab` 연동, 자동 로그인, 자동 fetch
-  - 실패 정책: `gh`가 없거나 인증이 없으면 명령 전체를 실패시키지 않고 `mergedViaHosting: null` + `hostingReason`으로 표현
+  - 실패 정책: `gh`가 없거나 인증이 없으면 명령 전체를 실패시키지 않고 텍스트 출력엔 note, JSON에는 `mergedViaHosting: null` + `hostingReason`으로 표현
 
 현재 구현 상태:
 - 로컬 git 기준 `[merged]`는 `git merge-base --is-ancestor <branch> <base>` 의미를 유지한다.

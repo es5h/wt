@@ -364,8 +364,7 @@ branch refs/heads/feature-x
 func TestList_VerifyHosting_GitHubMergedPR(t *testing.T) {
 	const cwd = "/cwd"
 	const repo = "/repo"
-	ghBin := filepath.Join(t.TempDir(), "gh")
-	writeExecutableStub(t, ghBin)
+	const ghBin = "/mock/bin/gh"
 	t.Setenv("WT_GH_BIN", ghBin)
 
 	wtPath := filepath.Join(t.TempDir(), "feature-x")
@@ -426,6 +425,25 @@ branch refs/heads/feature-x
 					args:    []string{"pr", "list", "--state", "merged", "--head", "feature-x", "--json", "number", "--limit", "1", "--base", "main"},
 					res:     runner.Result{Stdout: []byte(`[{"number":1}]`), ExitCode: 0},
 				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-x", "main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     errors.New("exit 1"),
+				},
+				{
+					workDir: repo,
+					name:    ghBin,
+					args:    []string{"auth", "status"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    ghBin,
+					args:    []string{"pr", "list", "--state", "merged", "--head", "feature-x", "--json", "number", "--limit", "1", "--base", "main"},
+					res:     runner.Result{Stdout: []byte(`[{"number":1}]`), ExitCode: 0},
+				},
 			},
 		},
 		Cwd: cwd,
@@ -446,8 +464,7 @@ branch refs/heads/feature-x
 func TestList_VerifyHosting_JSONUnavailable(t *testing.T) {
 	const cwd = "/cwd"
 	const repo = "/repo"
-	ghBin := filepath.Join(t.TempDir(), "gh")
-	writeExecutableStub(t, ghBin)
+	const ghBin = "/mock/bin/gh"
 	t.Setenv("WT_GH_BIN", ghBin)
 
 	wtPath := filepath.Join(t.TempDir(), "feature-x")
@@ -528,6 +545,83 @@ branch refs/heads/feature-x
 	}
 	if got[0]["hostingReason"] != "gh-auth-unavailable" {
 		t.Fatalf("hostingReason = %#v, want gh-auth-unavailable", got[0]["hostingReason"])
+	}
+}
+
+func TestList_VerifyHosting_TextShowsNoteWhenGHUnavailable(t *testing.T) {
+	const cwd = "/cwd"
+	const repo = "/repo"
+
+	wtPath := filepath.Join(t.TempDir(), "feature-x")
+	if err := os.MkdirAll(filepath.Join(wtPath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create .git dir: %v", err)
+	}
+
+	porcelain := strings.TrimSpace(`
+worktree `+wtPath+`
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+`) + "\n"
+
+	t.Setenv("WT_GH_BIN", "")
+	t.Setenv("PATH", "")
+
+	cmd, stdout, stderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{Stdout: []byte("git@github.com:es5h/wt.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-x", "main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     errors.New("exit 1"),
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-x", "main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     errors.New("exit 1"),
+				},
+			},
+		},
+		Cwd: cwd,
+	})
+
+	cmd.SetArgs([]string{"--verify-hosting", "--base", "main"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if !strings.Contains(stderr.String(), "note: hosting verify skipped") {
+		t.Fatalf("stderr = %q, want note", stderr.String())
+	}
+	if stdout.Len() == 0 {
+		t.Fatalf("stdout = empty, want list output")
 	}
 }
 
