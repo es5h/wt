@@ -70,6 +70,35 @@ repo-local git config 예시:
 - squash merge 환경에서 로컬 git `[merged]`와 GitHub PR merged 여부가 다를 수 있으므로, 의미를 분리해 사용자에게 명확히 보여준다.
 - 텍스트 출력 마커는 provider 일반형(`[merged-hosting:<provider>]`)을 사용하고, 상세 의미는 JSON(`hostingProvider`, `hostingKind`, `hostingChangeNumber`, `hostingChangeTitle`, `hostingChangeUrl`)에 둔다.
 
+## List recommendation signals
+`wt list`는 사용자가 prune/remove 검토 대상을 빠르게 좁힐 수 있도록 파생 신호를 계산한다.
+
+규칙:
+- `stale=true`:
+  - `prunable=true`
+  - 또는 worktree `path`가 없거나 `.git`가 없다
+- `recommendedAction=prune`:
+  - `prunable=true`인 경우만 사용한다
+- `recommendedAction=remove`:
+  - `prunable=false`
+  - `current=false`
+  - `primary=false`
+  - `detached=false`
+  - `locked=false`
+  - `missing-path=false`
+  - `missing-git=false`
+  - 그리고 로컬 git merged 또는 hosting merged 중 하나가 확인된 경우
+- `recommendedAction=none`:
+  - 위 두 조건에 해당하지 않는 경우
+- `safeToRemove=true`:
+  - `recommendedAction=remove`와 동일한 안전 기준을 만족하는 경우만 사용한다
+
+예외 처리 의도:
+- `current`, `primary`는 자동 추천에서 제외한다.
+- `detached`는 연결된 branch 의미가 없으므로 remove 추천에서 제외한다.
+- `missing-path`/`missing-git`는 stale 신호로는 보이되, `prune` 가능한 상태(`prunable`)가 아니면 자동으로 `remove` 추천하지 않는다.
+- squash merge 때문에 `mergedIntoBase`와 `mergedViaHosting`가 다를 수 있으므로, `safeToRemove`/`recommendedAction=remove`는 둘 중 하나가 확인되면 허용하되 근거 필드는 분리해서 유지한다.
+
 ## Prune safety
 - `wt prune`는 stale/prunable entry 정리 전용이다.
 - 기본 동작은 preview-only 이어야 하며, 실제 변경은 명시적 opt-in(`--apply`)일 때만 수행한다.

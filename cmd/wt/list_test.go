@@ -123,6 +123,15 @@ locked reason: manually locked
 						ExitCode: 0,
 					},
 				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res: runner.Result{
+						Stdout:   []byte(repo + "/.git\n"),
+						ExitCode: 0,
+					},
+				},
 			},
 		},
 		Cwd: cwd,
@@ -146,6 +155,9 @@ locked reason: manually locked
 	}
 	if got[0].Path != "/repo" || got[0].Branch != "refs/heads/main" || got[0].Locked != true {
 		t.Fatalf("unexpected json: %#v", got[0])
+	}
+	if !got[0].Current || !got[0].Primary || got[0].RecommendedAction != "none" || got[0].SafeToRemove {
+		t.Fatalf("unexpected derived signals: %#v", got[0])
 	}
 	if got[0].LockReason == "" {
 		t.Fatalf("expected lockReason to be present")
@@ -244,6 +256,15 @@ branch refs/heads/feature-x
 				{
 					workDir: repo,
 					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res: runner.Result{
+						Stdout:   []byte(repo + "/.git\n"),
+						ExitCode: 0,
+					},
+				},
+				{
+					workDir: repo,
+					name:    "git",
 					args:    []string{"rev-parse", "--verify", "--quiet", "main^{commit}"},
 					res: runner.Result{
 						ExitCode: 0,
@@ -270,8 +291,11 @@ branch refs/heads/feature-x
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "[merged]") {
+	if !strings.Contains(stdout.String(), "merged") {
 		t.Fatalf("stdout = %q, want merged marker", stdout.String())
+	}
+	if !strings.Contains(stdout.String(), "safe-remove") || !strings.Contains(stdout.String(), "recommend:remove") {
+		t.Fatalf("stdout = %q, want remove recommendation markers", stdout.String())
 	}
 }
 
@@ -311,6 +335,15 @@ branch refs/heads/feature-x
 					args:    []string{"worktree", "list", "--porcelain"},
 					res: runner.Result{
 						Stdout:   []byte(porcelain),
+						ExitCode: 0,
+					},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res: runner.Result{
+						Stdout:   []byte(repo + "/.git\n"),
 						ExitCode: 0,
 					},
 				},
@@ -359,6 +392,9 @@ branch refs/heads/feature-x
 	if got[0]["mergedIntoBase"] != true {
 		t.Fatalf("mergedIntoBase = %#v, want true", got[0]["mergedIntoBase"])
 	}
+	if got[0]["recommendedAction"] != "remove" || got[0]["safeToRemove"] != true || got[0]["stale"] != false {
+		t.Fatalf("unexpected derived fields: %#v", got[0])
+	}
 }
 
 func TestList_VerifyHosting_GitHubMergedPR(t *testing.T) {
@@ -393,6 +429,12 @@ branch refs/heads/feature-x
 					name:    "git",
 					args:    []string{"worktree", "list", "--porcelain"},
 					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
 				},
 				{
 					workDir: repo,
@@ -456,7 +498,7 @@ branch refs/heads/feature-x
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "[merged-hosting:github]") {
+	if !strings.Contains(stdout.String(), "merged-hosting:github") {
 		t.Fatalf("stdout = %q, want merged-hosting:github marker", stdout.String())
 	}
 }
@@ -493,6 +535,12 @@ branch refs/heads/feature-x
 					name:    "git",
 					args:    []string{"worktree", "list", "--porcelain"},
 					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
 				},
 				{
 					workDir: repo,
@@ -550,6 +598,9 @@ branch refs/heads/feature-x
 	if got[0]["hostingChangeUrl"] != "https://github.com/es5h/wt/pull/42" {
 		t.Fatalf("hostingChangeUrl = %#v, want PR URL", got[0]["hostingChangeUrl"])
 	}
+	if got[0]["recommendedAction"] != "remove" || got[0]["safeToRemove"] != true || got[0]["stale"] != false {
+		t.Fatalf("unexpected derived fields: %#v", got[0])
+	}
 }
 
 func TestList_VerifyHosting_JSONUnavailable(t *testing.T) {
@@ -584,6 +635,12 @@ branch refs/heads/feature-x
 					name:    "git",
 					args:    []string{"worktree", "list", "--porcelain"},
 					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
 				},
 				{
 					workDir: repo,
@@ -675,6 +732,12 @@ branch refs/heads/feature-x
 				{
 					workDir: repo,
 					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
 					args:    []string{"rev-parse", "--verify", "--quiet", "main^{commit}"},
 					res:     runner.Result{ExitCode: 0},
 				},
@@ -733,6 +796,12 @@ branch refs/heads/feature-x
 					name:    "git",
 					args:    []string{"worktree", "list", "--porcelain"},
 					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
 				},
 				{
 					workDir: repo,
@@ -816,6 +885,15 @@ detached
 				{
 					workDir: repo,
 					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res: runner.Result{
+						Stdout:   []byte(repo + "/.git\n"),
+						ExitCode: 0,
+					},
+				},
+				{
+					workDir: repo,
+					name:    "git",
 					args:    []string{"rev-parse", "--verify", "--quiet", "main^{commit}"},
 					res: runner.Result{
 						ExitCode: 0,
@@ -852,5 +930,62 @@ detached
 	}
 	if got[0]["detached"] != true {
 		t.Fatalf("detached = %#v, want true", got[0]["detached"])
+	}
+	if got[0]["recommendedAction"] != "none" || got[0]["safeToRemove"] != false {
+		t.Fatalf("unexpected derived fields: %#v", got[0])
+	}
+}
+
+func TestList_JSONPrunableSignals(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+
+	porcelain := strings.TrimSpace(`
+worktree /repo/.wt/feature-x
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+prunable gitdir file points to non-existent location
+`) + "\n"
+
+	cmd, stdout, stderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+			},
+		},
+		Cwd: cwd,
+	})
+
+	cmd.SetArgs([]string{"--json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+
+	got := decodeJSONObjects(t, stdout.Bytes())
+	if got[0]["stale"] != true || got[0]["recommendedAction"] != "prune" || got[0]["safeToRemove"] != false {
+		t.Fatalf("unexpected derived fields: %#v", got[0])
 	}
 }
