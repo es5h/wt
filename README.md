@@ -50,10 +50,10 @@ TUI는 `stdin`과 `stderr`가 모두 TTY일 때만 동작하며, 화면은 `stde
 
 ## User Docs
 
-- CLI 규칙: `docs/spec/cli.md`
-- 셸 helper / completion: `docs/ux/shell.md`
-- TUI 사용 흐름: `docs/ux/tui.md`
-- 변경 이력: `docs/release/notes.md`
+- CLI 규칙: [docs/spec/cli.md](docs/spec/cli.md)
+- 셸 helper / completion: [docs/ux/shell.md](docs/ux/shell.md)
+- TUI 사용 흐름: [docs/ux/tui.md](docs/ux/tui.md)
+- 변경 이력: [docs/release/notes.md](docs/release/notes.md)
 
 ## Development
 
@@ -62,3 +62,7 @@ make build
 make test
 make premerge
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
