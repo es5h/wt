@@ -24,6 +24,9 @@ func TestInit_Zsh(t *testing.T) {
 	if !strings.Contains(stdout.String(), "wtg() { cd \"$(wt goto") {
 		t.Fatalf("stdout = %q, want wtg function", stdout.String())
 	}
+	if !strings.Contains(stdout.String(), "compdef _wtg wtg") {
+		t.Fatalf("stdout = %q, want completion bridge", stdout.String())
+	}
 }
 
 func TestInit_Fish(t *testing.T) {

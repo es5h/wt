@@ -79,6 +79,13 @@ wt init zsh
 eval "$(wt init zsh)"
 ```
 
+#### `wtg` 자동완성(zsh)
+`wt`의 zsh completion(`_wt`)을 설치했다면, `wt init zsh` 출력에는 `wtg <TAB>`가 `wt goto <TAB>`처럼 동작하도록 “completion bridge”도 포함됩니다.
+
+만약 `wtg` 탭이 파일명 완성으로만 동작하면:
+- `_wt` 설치/로딩 여부를 확인: `whence -v _wt`
+- completion 설치: 위 “zsh 설치(옵트인)” 섹션 참고
+
 추가(초안):
 - completion 설치 UX를 `wt init`에 포함할지 여부는 추후 결정(로드맵: `docs/roadmap/README.md`)
 
