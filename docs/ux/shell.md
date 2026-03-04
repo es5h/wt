@@ -8,6 +8,20 @@
 
 `cobra` 기반 CLI는 `wt completion <shell>`을 기본 제공하므로, 이를 그대로 사용합니다.
 
+### 먼저 확인(진단)
+아래가 `"_wt not found"`이면 현재는 `wt` 전용 completion이 “설치/로딩”되어 있지 않은 상태입니다. (이 경우 `wt<TAB>`에서 파일명이 나오는 것은 zsh 기본 파일명 completion입니다.)
+
+```sh
+whence -v _wt || true
+```
+
+### 동적 후보(현재 구현)
+`wt goto <query>`의 `<query>` 위치에서는, 현재 레포의 `git worktree list --porcelain` 결과를 기반으로 **기존 worktree 브랜치 이름**을 자동완성 후보로 제공합니다.
+
+- 안전성: 읽기 전용(`git worktree list`)만 호출
+- 성능: 짧은 git 호출 1회 수준
+- 제약: “없는 브랜치 생성(--create)”은 아직 미구현이므로, 후보는 “이미 존재하는 worktree”에 한정됩니다.
+
 ### zsh 설치(옵트인)
 ```sh
 mkdir -p ~/.zsh/completions
@@ -16,6 +30,19 @@ wt completion zsh > ~/.zsh/completions/_wt
 # ~/.zshrc에 아래가 없다면 추가
 fpath=(~/.zsh/completions $fpath)
 autoload -Uz compinit && compinit
+```
+
+#### oh-my-zsh 사용 시(권장)
+oh-my-zsh를 쓰면 기본적으로 `~/.oh-my-zsh/custom/completions`가 `fpath`에 들어가 있으니, 아래가 가장 간단합니다.
+
+```sh
+mkdir -p ~/.oh-my-zsh/custom/completions
+wt completion zsh > ~/.oh-my-zsh/custom/completions/_wt
+
+rm -f ~/.zcompdump*
+autoload -Uz compinit && compinit
+
+whence -v _wt
 ```
 
 ### bash 설치(옵트인)

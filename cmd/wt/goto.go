@@ -20,9 +20,12 @@ func newGotoCmd() *cobra.Command {
 	var noTui bool
 
 	cmd := &cobra.Command{
-		Use:           "goto <query>",
-		Short:         "Print selected worktree path",
-		Args:          cobra.ExactArgs(1),
+		Use:   "goto <query>",
+		Short: "Print selected worktree path",
+		Args:  cobra.ExactArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return completeGotoQuery(cmd, args, toComplete)
+		},
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -89,6 +92,55 @@ func newGotoCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&noTui, "no-tui", false, "disable TUI selection (reserved)")
 
 	return cmd
+}
+
+func completeGotoQuery(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) != 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	d, err := getDeps(cmd)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	ctx := cmd.Context()
+	repoRoot, err := git.RepoRoot(ctx, d.Runner, d.Cwd)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	wts, err := git.WorktreeList(ctx, d.Runner, repoRoot)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	prefix := strings.ToLower(strings.TrimSpace(toComplete))
+
+	uniq := map[string]struct{}{}
+	for _, wt := range wts {
+		if wt.Branch != "" && !wt.Detached {
+			branchShort := strings.TrimPrefix(wt.Branch, "refs/heads/")
+			if branchShort != "" {
+				uniq[branchShort] = struct{}{}
+			}
+			continue
+		}
+
+		base := filepath.Base(wt.Path)
+		if base != "" {
+			uniq[base] = struct{}{}
+		}
+	}
+
+	out := make([]string, 0, len(uniq))
+	for c := range uniq {
+		if prefix == "" || strings.HasPrefix(strings.ToLower(c), prefix) {
+			out = append(out, c)
+		}
+	}
+	sort.Strings(out)
+	return out, cobra.ShellCompDirectiveNoFileComp
 }
 
 func formatAmbiguousGoto(query string, matches []worktree.Worktree) string {

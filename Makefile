@@ -80,3 +80,9 @@ pr-create: premerge ## Create GitHub PR via gh (requires gh auth login)
 	@[ -x "$(GH_BIN)" ] || { echo "gh not found. Install: 'go install github.com/cli/cli/v2/cmd/gh@latest'"; exit 1; }
 	@$(GH_BIN) auth status >/dev/null 2>&1 || { echo "gh not authenticated. Run: '$(GH_BIN) auth login'"; exit 1; }
 	@$(GH_BIN) pr create --fill
+
+.PHONY: completion-zsh
+completion-zsh: init ## Generate zsh completion file to dist/completions/_wt (no install)
+	@mkdir -p dist/completions
+	@$(GOENV) go run $(LDFLAGS) ./cmd/wt completion zsh > dist/completions/_wt
+	@echo "generated: dist/completions/_wt"

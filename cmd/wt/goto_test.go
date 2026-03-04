@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
+
 	"wt/internal/runner"
 )
 
@@ -125,5 +127,106 @@ branch refs/heads/feature-x
 	}
 	if got.Path != "/repo/.wt/feature-x" || got.Branch != "feature-x" {
 		t.Fatalf("unexpected json: %#v", got)
+	}
+}
+
+func TestGotoCompletion_SuggestsWorktreeBranches(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree /repo/.wt/feature-x
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+`) + "\n"
+
+	r := &fakeRunner{
+		t: t,
+		calls: []fakeCall{
+			{
+				workDir: cwd,
+				name:    "git",
+				args:    []string{"rev-parse", "--show-toplevel"},
+				res: runner.Result{
+					Stdout:   []byte(repo + "\n"),
+					ExitCode: 0,
+				},
+			},
+			{
+				workDir: repo,
+				name:    "git",
+				args:    []string{"worktree", "list", "--porcelain"},
+				res: runner.Result{
+					Stdout:   []byte(porcelain),
+					ExitCode: 0,
+				},
+			},
+		},
+	}
+
+	cmd := newGotoCmd()
+	cmd.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{Runner: r, Cwd: cwd}))
+
+	got, dir := cmd.ValidArgsFunction(cmd, []string{}, "")
+	if dir != cobra.ShellCompDirectiveNoFileComp {
+		t.Fatalf("directive = %v, want %v", dir, cobra.ShellCompDirectiveNoFileComp)
+	}
+
+	want := []string{"feature-x", "main"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("completions = %q, want %q", got, want)
+	}
+}
+
+func TestGotoCompletion_FiltersByPrefix(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree /repo/.wt/feature-x
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+`) + "\n"
+
+	r := &fakeRunner{
+		t: t,
+		calls: []fakeCall{
+			{
+				workDir: cwd,
+				name:    "git",
+				args:    []string{"rev-parse", "--show-toplevel"},
+				res: runner.Result{
+					Stdout:   []byte(repo + "\n"),
+					ExitCode: 0,
+				},
+			},
+			{
+				workDir: repo,
+				name:    "git",
+				args:    []string{"worktree", "list", "--porcelain"},
+				res: runner.Result{
+					Stdout:   []byte(porcelain),
+					ExitCode: 0,
+				},
+			},
+		},
+	}
+
+	cmd := newGotoCmd()
+	cmd.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{Runner: r, Cwd: cwd}))
+
+	got, _ := cmd.ValidArgsFunction(cmd, []string{}, "f")
+	if strings.Join(got, ",") != "feature-x" {
+		t.Fatalf("completions = %q, want %q", got, []string{"feature-x"})
 	}
 }
