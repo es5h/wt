@@ -103,11 +103,15 @@ type jsonWorktree struct {
 	LockReason  string `json:"lockReason,omitempty"`
 	PruneReason string `json:"pruneReason,omitempty"`
 
-	PathExists     *bool  `json:"pathExists,omitempty"`
-	DotGitExists   *bool  `json:"dotGitExists,omitempty"`
-	Valid          *bool  `json:"valid,omitempty"`
-	MergedIntoBase *bool  `json:"mergedIntoBase,omitempty"`
-	BaseRef        string `json:"baseRef,omitempty"`
+	Verify *jsonVerifyFields `json:"-"`
+}
+
+type jsonVerifyFields struct {
+	PathExists     bool
+	DotGitExists   bool
+	Valid          bool
+	MergedIntoBase *bool
+	BaseRef        string
 }
 
 type listVerifyContext struct {
@@ -121,6 +125,58 @@ type verifyInfo struct {
 	Valid          bool
 	MergedIntoBase *bool
 	BaseRef        string
+}
+
+func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
+	type baseJSONWorktree struct {
+		Path   string `json:"path"`
+		HEAD   string `json:"head"`
+		Branch string `json:"branch"`
+
+		Detached bool `json:"detached"`
+		Locked   bool `json:"locked"`
+		Prunable bool `json:"prunable"`
+
+		LockReason  string `json:"lockReason,omitempty"`
+		PruneReason string `json:"pruneReason,omitempty"`
+
+		PathExists     *bool  `json:"pathExists,omitempty"`
+		DotGitExists   *bool  `json:"dotGitExists,omitempty"`
+		Valid          *bool  `json:"valid,omitempty"`
+		MergedIntoBase *bool  `json:"mergedIntoBase,omitempty"`
+		BaseRef        string `json:"baseRef,omitempty"`
+	}
+
+	out := baseJSONWorktree{
+		Path:        jwt.Path,
+		HEAD:        jwt.HEAD,
+		Branch:      jwt.Branch,
+		Detached:    jwt.Detached,
+		Locked:      jwt.Locked,
+		Prunable:    jwt.Prunable,
+		LockReason:  jwt.LockReason,
+		PruneReason: jwt.PruneReason,
+	}
+	if jwt.Verify != nil {
+		out.PathExists = &jwt.Verify.PathExists
+		out.DotGitExists = &jwt.Verify.DotGitExists
+		out.Valid = &jwt.Verify.Valid
+		out.MergedIntoBase = jwt.Verify.MergedIntoBase
+		out.BaseRef = jwt.Verify.BaseRef
+	}
+
+	if jwt.Verify != nil && jwt.Verify.MergedIntoBase == nil {
+		type baseWithNullMerged struct {
+			baseJSONWorktree
+			MergedIntoBase any `json:"mergedIntoBase"`
+		}
+		return json.Marshal(baseWithNullMerged{
+			baseJSONWorktree: out,
+			MergedIntoBase:   nil,
+		})
+	}
+
+	return json.Marshal(out)
 }
 
 func toJSONWorktrees(cmd *cobra.Command, d *deps, wts []worktree.Worktree, verifyCtx *listVerifyContext) []jsonWorktree {
@@ -139,11 +195,13 @@ func toJSONWorktrees(cmd *cobra.Command, d *deps, wts []worktree.Worktree, verif
 		if verifyCtx != nil {
 			info, _ := verifyWorktree(cmd, d, verifyCtx, wt)
 			if info != nil {
-				jwt.PathExists = &info.PathExists
-				jwt.DotGitExists = &info.DotGitExists
-				jwt.Valid = &info.Valid
-				jwt.MergedIntoBase = info.MergedIntoBase
-				jwt.BaseRef = info.BaseRef
+				jwt.Verify = &jsonVerifyFields{
+					PathExists:     info.PathExists,
+					DotGitExists:   info.DotGitExists,
+					Valid:          info.Valid,
+					MergedIntoBase: info.MergedIntoBase,
+					BaseRef:        info.BaseRef,
+				}
 			}
 		}
 		out = append(out, jwt)
