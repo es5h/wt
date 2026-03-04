@@ -142,6 +142,11 @@ branch용 worktree를 만든다.
 - 실제 생성 대신 실행될 `git worktree add ...` 명령을 `stderr`에 출력한다.
 - 반환값은 실제 생성 시 사용할 path다.
 
+현재 한계(구현 기준):
+
+- `--path` 또는 root 정책으로 계산된 최종 경로가 “파일인지/디렉터리인지/비어있는지”를 `wt`가 사전에 검사하지 않는다.
+- 해당 검증은 현재 `git worktree add` 실행 결과에 의존한다.
+
 ## `wt remove [query]`
 
 선택한 worktree를 제거한다.

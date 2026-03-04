@@ -16,13 +16,16 @@
 
 현재 구조와 최근 머지 흐름을 기준으로 보면 다음 순서가 가장 자연스럽다.
 
-1. Shell/completion 설치 UX 정리
+1. `wt create` / `wt path --create` 경로 preflight 검증
+현재는 최종 경로가 파일인지, 디렉터리인지, 비어있는지 여부를 사전에 검사하지 않고 `git worktree add` 실패에 의존한다. 생성 전에 명시적으로 검증해 더 빠르고 일관된 에러 메시지를 제공하는 후속 작업이 필요하다.
+
+2. Shell/completion 설치 UX 정리
 현재는 `wt completion <shell>`과 `wt init <shell>`이 모두 존재하지만 설치는 전부 수동이다. 설치 스크립트와 문서에서 opt-in 설치 경로를 더 분명히 하거나, 안전한 범위의 helper 명령을 추가하는 작업이 다음 단계로 적합하다.
 
-2. Cleanup selection ergonomics
+3. Cleanup selection ergonomics
 `wt cleanup`는 이미 추천 신호와 실행 엔진을 갖고 있지만 현재는 일괄 preview/apply 중심이다. 지금 있는 `list` 파생 신호와 TUI picker를 재사용해 선택적 review/apply 흐름을 붙이는 것이 현실적인 확장이다.
 
-3. Structured output consistency hardening
+4. Structured output consistency hardening
 `list`, `path`, `run`, `remove`, `prune`, `cleanup`에 JSON이 이미 존재한다. 스크립트 사용성을 높이려면 명령 간 action/reason/exit code 표현을 더 일관되게 다듬는 후속 작업이 자연스럽다.
 
 ## Not Current Scope
