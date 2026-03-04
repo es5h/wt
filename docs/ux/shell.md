@@ -16,14 +16,14 @@ whence -v _wt || true
 ```
 
 ### 동적 후보(현재 구현)
-`wt goto <query>`의 `<query>` 위치에서는, 현재 레포의 `git worktree list --porcelain` 결과를 기반으로 **기존 worktree 브랜치 이름**을 자동완성 후보로 제공합니다.
+`wt path <query>`의 `<query>` 위치에서는, 현재 레포의 `git worktree list --porcelain` 결과를 기반으로 **기존 worktree 브랜치 이름**을 자동완성 후보로 제공합니다.
 
 - 안전성: 읽기 전용(`git worktree list`)만 호출
 - 성능: 짧은 git 호출 1회 수준
 - 기본 후보는 “이미 존재하는 worktree 브랜치”에 한정됩니다.
 
 추가(옵트인):
-- 원격 브랜치 후보까지 포함하고 싶으면 환경변수 `WT_GOTO_COMPLETE_REMOTE=1`을 설정합니다.
+- 원격 브랜치 후보까지 포함하고 싶으면 환경변수 `WT_PATH_COMPLETE_REMOTE=1`을 설정합니다.
 - 이 경우에도 `git fetch`는 자동으로 하지 않으며, 로컬에 존재하는 `refs/remotes/origin/*`만 사용합니다.
 
 ### zsh 설치(옵트인)
@@ -62,16 +62,16 @@ wt completion fish > ~/.config/fish/completions/wt.fish
 ```
 
 ## `wt init <shell>`
-목표: `cd "$(wt goto ...)"`를 래핑하는 함수를 제공한다.
+목표: `cd "$(wt path ...)"`를 래핑하는 함수를 제공한다.
 
 권장 UX(초안):
 - 사용자는 아래 중 하나로 rc 파일에 추가한다.
 
 예시(컨셉, 스펙 확정 전):
 - zsh/bash:
-  - `wtg() { cd "$(wt goto "$@")" || return; }`
+  - `wtg() { cd "$(wt path "$@")" || return; }`
 - fish:
-  - `function wtg; cd (wt goto $argv); or return; end`
+  - `function wtg; cd (wt path $argv); or return; end`
 
 ### 사용(추천)
 ```sh
@@ -84,7 +84,7 @@ eval "$(wt init zsh)"
 ```
 
 #### `wtg` 자동완성(zsh)
-`wt`의 zsh completion(`_wt`)을 설치했다면, `wt init zsh` 출력에는 `wtg <TAB>`가 `wt goto <TAB>`처럼 동작하도록 “completion bridge”도 포함됩니다.
+`wt`의 zsh completion(`_wt`)을 설치했다면, `wt init zsh` 출력에는 `wtg <TAB>`가 `wt path <TAB>`처럼 동작하도록 “completion bridge”도 포함됩니다.
 
 만약 `wtg` 탭이 파일명 완성으로만 동작하면:
 - `_wt` 설치/로딩 여부를 확인: `whence -v _wt`

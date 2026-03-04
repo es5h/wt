@@ -20,9 +20,9 @@ func newInitCmd() *cobra.Command {
 			switch shell {
 			case "zsh":
 				// Output-only: user must opt-in by pasting into their rc file.
-				// Includes an optional completion bridge so `wtg <TAB>` completes like `wt goto <TAB>`.
+				// Includes an optional completion bridge so `wtg <TAB>` completes like `wt path <TAB>`.
 				fmt.Fprintln(cmd.OutOrStdout(), "# wt shell integration (paste into your ~/.zshrc)")
-				fmt.Fprintln(cmd.OutOrStdout(), `wtg() { cd "$(wt goto "$@")" || return; }`)
+				fmt.Fprintln(cmd.OutOrStdout(), `wtg() { cd "$(wt path "$@")" || return; }`)
 				fmt.Fprintln(cmd.OutOrStdout(), "")
 				fmt.Fprintln(cmd.OutOrStdout(), "# Optional: completion bridge (requires `wt` zsh completion to be installed)")
 				fmt.Fprintln(cmd.OutOrStdout(), `if whence -w compdef >/dev/null 2>&1; then`)
@@ -33,7 +33,7 @@ func newInitCmd() *cobra.Command {
 				fmt.Fprintln(cmd.OutOrStdout(), `    _wtg() {`)
 				fmt.Fprintln(cmd.OutOrStdout(), `      local -a wtg_words`)
 				fmt.Fprintln(cmd.OutOrStdout(), `      wtg_words=("${words[@]}")`)
-				fmt.Fprintln(cmd.OutOrStdout(), `      words=(wt goto "${wtg_words[@]:1}")`)
+				fmt.Fprintln(cmd.OutOrStdout(), `      words=(wt path "${wtg_words[@]:1}")`)
 				fmt.Fprintln(cmd.OutOrStdout(), `      (( CURRENT++ ))`)
 				fmt.Fprintln(cmd.OutOrStdout(), `      _wt`)
 				fmt.Fprintln(cmd.OutOrStdout(), `    }`)
@@ -43,12 +43,12 @@ func newInitCmd() *cobra.Command {
 				return nil
 			case "bash":
 				fmt.Fprintln(cmd.OutOrStdout(), "# wt shell integration (paste into your ~/.bashrc)")
-				fmt.Fprintln(cmd.OutOrStdout(), `wtg() { cd "$(wt goto "$@")" || return; }`)
+				fmt.Fprintln(cmd.OutOrStdout(), `wtg() { cd "$(wt path "$@")" || return; }`)
 				return nil
 			case "fish":
 				fmt.Fprintln(cmd.OutOrStdout(), "# wt shell integration (paste into config.fish)")
 				fmt.Fprintln(cmd.OutOrStdout(), "function wtg")
-				fmt.Fprintln(cmd.OutOrStdout(), "  cd (wt goto $argv); or return")
+				fmt.Fprintln(cmd.OutOrStdout(), "  cd (wt path $argv); or return")
 				fmt.Fprintln(cmd.OutOrStdout(), "end")
 				return nil
 			default:

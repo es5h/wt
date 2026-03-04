@@ -1,11 +1,11 @@
 # TUI (vim-ish picker) spec (draft)
 
 ## Goal
-여러 worktree 후보 중 하나를 빠르게 선택해 `wt goto`가 경로를 반환하게 한다.
+여러 worktree 후보 중 하나를 빠르게 선택해 `wt path`가 경로를 반환하게 한다.
 
 ## Entry
-- `wt goto` (query 없음) → 기본적으로 picker를 띄워 전체 목록에서 선택
-- `wt goto <query> --tui` → 필터링된 후보를 picker로 선택
+- `wt path` (query 없음) → 기본적으로 picker를 띄워 전체 목록에서 선택
+- `wt path <query> --tui` → 필터링된 후보를 picker로 선택
 
 비활성 조건(초안):
 - `stdout` 또는 `stdin`이 터미널이 아니면(파이프/CI) TUI 실행 금지(에러 또는 `--no-tui` 동작)

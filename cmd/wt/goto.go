@@ -14,7 +14,7 @@ import (
 	"wt/internal/worktree"
 )
 
-func newGotoCmd() *cobra.Command {
+func newPathCmd() *cobra.Command {
 	var jsonOut bool
 	var create bool
 	var tui bool
@@ -24,23 +24,23 @@ func newGotoCmd() *cobra.Command {
 	var createFrom string
 
 	cmd := &cobra.Command{
-		Use:   "goto <query>",
+		Use:   "path <query>",
 		Short: "Print selected worktree path",
 		Args:  cobra.ExactArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			return completeGotoQuery(cmd, args, toComplete)
+			return completePathQuery(cmd, args, toComplete)
 		},
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if tui {
-				return usageError(fmt.Errorf("wt goto: --tui is not implemented yet"))
+				return usageError(fmt.Errorf("wt path: --tui is not implemented yet"))
 			}
 			_ = noTui
 
 			query := strings.TrimSpace(args[0])
 			if query == "" {
-				return usageError(fmt.Errorf("wt goto: query cannot be empty"))
+				return usageError(fmt.Errorf("wt path: query cannot be empty"))
 			}
 
 			d, err := getDeps(cmd)
@@ -62,7 +62,7 @@ func newGotoCmd() *cobra.Command {
 			matches := matchWorktrees(wts, query)
 			if len(matches) == 0 {
 				if !create {
-					return &exitError{Code: 1, Err: fmt.Errorf("wt goto: no matches for %q", query)}
+					return &exitError{Code: 1, Err: fmt.Errorf("wt path: no matches for %q", query)}
 				}
 
 				branch := query
@@ -88,7 +88,7 @@ func newGotoCmd() *cobra.Command {
 				fmt.Fprintln(cmd.OutOrStdout(), path)
 				return nil
 			}
-			chosen, err := resolveMatchedWorktree("wt goto", wts, query)
+			chosen, err := resolveMatchedWorktree("wt path", wts, query)
 			if err != nil {
 				return err
 			}
@@ -105,7 +105,7 @@ func newGotoCmd() *cobra.Command {
 				})
 			}
 
-			// IMPORTANT: stdout must contain only the path (for: cd "$(wt goto ...)")
+			// IMPORTANT: stdout must contain only the path (for: cd "$(wt path ...)")
 			fmt.Fprintln(cmd.OutOrStdout(), chosen.Path)
 			return nil
 		},
@@ -122,7 +122,7 @@ func newGotoCmd() *cobra.Command {
 	return cmd
 }
 
-func completeGotoQuery(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func completePathQuery(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	if len(args) != 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
@@ -161,7 +161,7 @@ func completeGotoQuery(cmd *cobra.Command, args []string, toComplete string) ([]
 		}
 	}
 
-	if os.Getenv("WT_GOTO_COMPLETE_REMOTE") == "1" {
+	if os.Getenv("WT_PATH_COMPLETE_REMOTE") == "1" {
 		branches, err := git.RemoteBranches(ctx, d.Runner, repoRoot, "origin")
 		if err == nil {
 			for _, b := range branches {

@@ -51,10 +51,10 @@ PR에서 사용자-facing 동작이 추가/변경되면, 아래 중 하나로 e2
 옵션 A) 현재 repo에서 실행(빠름)
 - `make run ARGS="--help"`
 - `make run ARGS="list --verify --base origin/main"`
-- `make run ARGS="list"`로 후보를 확인한 뒤, 실제 존재하는 query로 실행: `make run ARGS="goto <query>"`
+- `make run ARGS="list"`로 후보를 확인한 뒤, 실제 존재하는 query로 실행: `make run ARGS="path <query>"`
 
 주의:
-- `wt goto`는 “현재 Git 컨텍스트의 worktree 목록”에서만 매칭하므로, 해당 repo에 worktree가 1개뿐이면 테스트할 query가 없을 수 있습니다.
+- `wt path`는 “현재 Git 컨텍스트의 worktree 목록”에서만 매칭하므로, 해당 repo에 worktree가 1개뿐이면 테스트할 query가 없을 수 있습니다.
 - 이런 경우에는 아래 옵션 B(임시 repo) 방식으로 재현하는 것을 권장합니다.
 
 옵션 B) 임시 repo에서 실행(가장 확실함)
@@ -68,7 +68,7 @@ git worktree add -b feature-x ../wt-feature-x
 
 # wt 실행(아직 설치 전이라면 go run 사용)
 go run "$wt_repo"/cmd/wt list
-go run "$wt_repo"/cmd/wt goto feature-x
+go run "$wt_repo"/cmd/wt path feature-x
 ```
 
 민감정보 주의:
