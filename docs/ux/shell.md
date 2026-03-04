@@ -3,6 +3,33 @@
 ## Why
 - `wt init`/completion 동작을 문서화한다. (관련 CLI 스펙: `docs/spec/cli.md`)
 
+## Low-level completion (recommended)
+초기에는 “가볍고 안전한” 자동완성을 권장합니다. (서브커맨드/플래그 중심)
+
+`cobra` 기반 CLI는 `wt completion <shell>`을 기본 제공하므로, 이를 그대로 사용합니다.
+
+### zsh 설치(옵트인)
+```sh
+mkdir -p ~/.zsh/completions
+wt completion zsh > ~/.zsh/completions/_wt
+
+# ~/.zshrc에 아래가 없다면 추가
+fpath=(~/.zsh/completions $fpath)
+autoload -Uz compinit && compinit
+```
+
+### bash 설치(옵트인)
+```sh
+wt completion bash > ~/.bash_completion.d/wt
+source ~/.bash_completion.d/wt
+```
+
+### fish 설치(옵트인)
+```sh
+mkdir -p ~/.config/fish/completions
+wt completion fish > ~/.config/fish/completions/wt.fish
+```
+
 ## `wt init <shell>`
 목표: `cd "$(wt goto ...)"`를 래핑하는 함수를 제공한다.
 
