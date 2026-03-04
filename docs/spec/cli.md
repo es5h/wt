@@ -104,13 +104,25 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 ## `wt remove <name>`
 목표: worktree를 제거한다.
 
-규칙(초안):
-- 기본은 확인 프롬프트(또는 `--force`).
-- 브랜치 삭제는 기본 동작이 아니다(별도 옵션).
+규칙:
+- `--dry-run`이면 preview-only 이고 실제 변경을 하지 않는다.
+- `--force`이면 확인 없이 즉시 제거한다.
+- `--dry-run`/`--force`가 둘 다 없으면 interactive TTY에서만 확인 프롬프트를 보여준다.
+- non-interactive 환경에서는 기존처럼 `--dry-run` 또는 `--force`가 필요하다.
+- primary worktree는 제거할 수 없다.
+- 현재 실행 중인 worktree는 제거할 수 없다.
+- `prunable` entry는 `remove` 대상이 아니며, `wt prune --apply`를 사용해야 한다.
+- 브랜치 삭제는 기본 동작이 아니다(별도 옵션 없음).
 
-옵션(초안):
+옵션:
 - `--force`: 확인 생략
 - `--dry-run`
+- `--json`: `{path, branch, action, removed}` 출력
+
+현재 구현 규칙:
+- interactive TTY에서는 stderr에 `Remove worktree <path> (<branch>)? [y/N]` 프롬프트를 출력하고, `y`/`yes`일 때만 삭제한다.
+- 실제 삭제는 내부적으로 `git worktree remove --force <path>`를 사용한다.
+- 기본 text 출력은 `would-remove` / `removed` 상태를 한 줄로 보여준다.
 
 ## `wt prune`
 목표: stale/prunable worktree entry를 preview하거나 정리한다.
