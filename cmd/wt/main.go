@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -72,6 +73,8 @@ type deps struct {
 	IsInteractive func() bool
 	CanUseTUI     func() bool
 	PickWorktree  func(cmd *cobra.Command, wts []worktree.Worktree, initialFilter string) (worktree.Worktree, error)
+	PreviewPrune  func(cmd *cobra.Command, items []pruneCandidate, apply bool) error
+	ConfirmPrune  func(in io.Reader, out io.Writer, count int) (bool, error)
 }
 
 func ensureDeps(cmd *cobra.Command) error {
@@ -94,6 +97,8 @@ func ensureDeps(cmd *cobra.Command) error {
 		IsInteractive: stdinIsTTY,
 		CanUseTUI:     stdioCanUseTUI,
 		PickWorktree:  pickWorktreeWithTUI,
+		PreviewPrune:  previewPruneWithTUI,
+		ConfirmPrune:  confirmPrune,
 	}
 
 	cmd.SetContext(context.WithValue(ctx, depsKey{}, d))
