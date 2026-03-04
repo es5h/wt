@@ -3,6 +3,7 @@
 이 문서는 사용자에게 보이는 변경사항을 기록합니다. (README에는 패치 노트를 쓰지 않음)
 
 ## Unreleased
+- 2026-03-05: `wt list --verify-hosting` 추가(GitHub `gh` 기반 opt-in; `merged-pr`/`mergedViaHosting`로 로컬 git `[merged]`와 의미 분리, GitLab은 현재 감지만 지원)
 - 2026-03-05: `wt run <query> -- <cmd...>` 추가(`wt goto`와 같은 매칭 규칙 사용, 종료 코드 보존, `--json` 지원)
 - 2026-03-05: `wt create`와 `wt goto --create`가 동일한 worktree root 오버라이드 정책을 공유하도록 리팩터링 (`--root` > `WT_ROOT` > repo-local git config `wt.root` > `<repo>/.wt`)
 - 2026-03-05: `wt list --json --verify` 출력 스키마를 고정해 `pathExists`, `dotGitExists`, `valid`, `mergedIntoBase`, `baseRef`를 항상 포함하도록 조정하고, detached/branch 없음 케이스의 `mergedIntoBase`를 `null`로 명시

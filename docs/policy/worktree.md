@@ -48,3 +48,20 @@ repo-local git config 예시:
 - 브랜치명 → 폴더명 정규화 규칙을 유틸로 통일한다.
   - 현재 기본 경로는 git 브랜치의 `/`를 하위 디렉토리로 유지해 `<root>/<branch>` 형태를 만든다.
   - 절대 경로/상위 디렉토리 탈출(`..`)이 되는 브랜치명은 기본 경로 계산에 사용할 수 없다.
+
+## Hosting verify scope
+호스팅(PR/MR) merged 여부는 로컬 git 검증과 분리된 opt-in 기능으로 다룬다.
+
+현재 in-scope:
+- `wt list --verify-hosting`
+- provider 자동 감지(`origin` remote URL 기준)
+- GitHub만 실제 조회 지원 (`gh` CLI + 로그인된 세션 필요)
+- 실패 시 hard error 대신 결과를 `null` + reason으로 반환
+
+현재 out-of-scope:
+- GitLab 실제 조회 (`glab`/API)
+- 자동 `gh auth login` / 자동 브라우저 인증
+- 네트워크 fetch로 remote 상태를 새로 동기화하는 동작
+
+의도:
+- squash merge 환경에서 로컬 git `[merged]`와 GitHub PR merged 여부가 다를 수 있으므로, 의미를 분리해 사용자에게 명확히 보여준다.

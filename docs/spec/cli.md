@@ -19,6 +19,18 @@
 - `--porcelain`: git처럼 안정적 포맷(필드 고정, 파싱 용도)
 - `--verify`: worktree entry 검증(경로/.git 존재 + base ref 기준 merged 여부)
   - `--base <ref>`: `--verify`의 base ref 지정(기본: `origin/HEAD` 또는 `main`)
+- `--verify-hosting`: 호스팅(PR/MR) 기준 merged 여부를 추가 검증
+  - 현재 범위(in-scope): GitHub만 지원 (`gh` CLI + `gh auth status` 필요)
+  - 현재 범위(out-of-scope): GitLab API/`glab` 연동, 자동 로그인, 자동 fetch
+  - 실패 정책: `gh`가 없거나 인증이 없으면 명령 전체를 실패시키지 않고 `mergedViaHosting: null` + `hostingReason`으로 표현
+
+현재 구현 상태:
+- 로컬 git 기준 `[merged]`는 `git merge-base --is-ancestor <branch> <base>` 의미를 유지한다.
+- 호스팅 기준 merged는 별도 필드/마커로 분리한다:
+  - 텍스트: `[merged-pr]`
+  - JSON: `hostingProvider`, `mergedViaHosting`, `hostingReason`
+- provider 감지는 `origin` remote URL 기준 자동 감지다.
+- GitLab remote는 현재 `hostingProvider=gitlab`, `mergedViaHosting=null`, `hostingReason=unsupported-provider`로 반환한다.
 
 `--json --verify` 출력 규칙:
 - 각 항목은 항상 `pathExists`, `dotGitExists`, `valid`, `mergedIntoBase`, `baseRef` 필드를 포함한다.
@@ -43,7 +55,7 @@
 옵션(초안):
 - `--create`: query에 해당하는 브랜치 worktree가 없으면 생성
 - `--path <dir>`: `--create` 시 생성 경로를 직접 지정
-- `--root <dir>`: `--create` 시 기본 생성 경로의 root 지정. 우선순위는 `--root` > `WT_ROOT` > repo-local git config `wt.root` > `<repo>/.wt`
+- `--root <dir>`: `--create` 시 기본 생성 경로의 root 지정. 우선순위는 `--root` > `WT_ROOT` > repo-local git config `wt.root` > `<primary-root>/.wt`
 - `--from <ref>`: `--create` 시 새 브랜치의 start point 지정(기본: `origin/<branch>`가 있으면 그걸 사용, 없으면 `origin/HEAD` 또는 `main`)
 - `--tui`: 후보가 여러 개면 TUI로 선택(비-interactive 환경이면 에러)
 - `--no-tui`: 후보가 여러 개면 에러(스크립트 안전)
@@ -75,13 +87,13 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 
 옵션(초안):
 - `--path <dir>`: 생성 경로를 직접 지정
-- `--root <dir>`: 기본 생성 경로의 root 지정. 우선순위는 `--root` > `WT_ROOT` > repo-local git config `wt.root` > `<repo>/.wt`
+- `--root <dir>`: 기본 생성 경로의 root 지정. 우선순위는 `--root` > `WT_ROOT` > repo-local git config `wt.root` > `<primary-root>/.wt`
 - `--from <ref>`: 새 브랜치의 start point 지정(기본: `origin/HEAD` 또는 `main`)
 - `--dry-run`: 실행될 git 커맨드/경로만 출력(변경 없음)
 
 현재 구현 규칙:
-- 기본 생성 경로: `<repo>/.wt/<branch>`
-- `--root`, `WT_ROOT`, `wt.root`가 상대 경로이면 repo root 기준으로 해석한다.
+- 기본 생성 경로: `<primary-root>/.wt/<branch>`
+- `--root`, `WT_ROOT`, `wt.root`가 상대 경로이면 `<primary-root>` 기준으로 해석한다.
 - 로컬 브랜치가 이미 존재하면: `git worktree add <path> <branch>`
 - 로컬 브랜치가 없고 `origin/<branch>`가 존재하면: `git worktree add -b <branch> <path> origin/<branch>`
 - 둘 다 없으면: `git worktree add -b <branch> <path> <from>`
