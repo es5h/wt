@@ -34,12 +34,14 @@
 
 옵션(초안):
 - `--create`: query에 해당하는 브랜치 worktree가 없으면 생성
+- `--path <dir>`: `--create` 시 생성 경로 지정(기본: `<repo>/.wt/<branch>`)
+- `--from <ref>`: `--create` 시 새 브랜치의 start point 지정(기본: `origin/<branch>`가 있으면 그걸 사용, 없으면 `origin/HEAD` 또는 `main`)
 - `--tui`: 후보가 여러 개면 TUI로 선택(비-interactive 환경이면 에러)
 - `--no-tui`: 후보가 여러 개면 에러(스크립트 안전)
 - `--json`: 선택 결과를 json으로 출력(예: `{path, branch, reason}`)
 
 현재 구현 상태:
-- `--create`, `--tui`는 아직 미구현이며 지정 시 사용법 에러로 종료한다.
+- `--tui`는 아직 미구현이며 지정 시 사용법 에러로 종료한다.
 - 후보가 2개 이상이면 기본 동작은 “에러 + 후보 출력”이다(TUI 구현 전까지).
 
 TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
@@ -49,8 +51,14 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 
 옵션(초안):
 - `--path <dir>`: 생성 경로 지정(기본은 정책에 따름)
-- `--track origin/<branch>`: 원격을 추적하는 브랜치로 생성
-- `--dry-run`: 실행될 git 커맨드/경로만 출력
+- `--from <ref>`: 새 브랜치의 start point 지정(기본: `origin/HEAD` 또는 `main`)
+- `--dry-run`: 실행될 git 커맨드/경로만 출력(변경 없음)
+
+현재 구현 규칙:
+- 기본 생성 경로: `<repo>/.wt/<branch>`
+- 로컬 브랜치가 이미 존재하면: `git worktree add <path> <branch>`
+- 로컬 브랜치가 없고 `origin/<branch>`가 존재하면: `git worktree add -b <branch> <path> origin/<branch>`
+- 둘 다 없으면: `git worktree add -b <branch> <path> <from>`
 
 ## `wt remove <name>`
 목표: worktree를 제거한다.

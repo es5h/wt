@@ -20,7 +20,11 @@ whence -v _wt || true
 
 - 안전성: 읽기 전용(`git worktree list`)만 호출
 - 성능: 짧은 git 호출 1회 수준
-- 제약: “없는 브랜치 생성(--create)”은 아직 미구현이므로, 후보는 “이미 존재하는 worktree”에 한정됩니다.
+- 기본 후보는 “이미 존재하는 worktree 브랜치”에 한정됩니다.
+
+추가(옵트인):
+- 원격 브랜치 후보까지 포함하고 싶으면 환경변수 `WT_GOTO_COMPLETE_REMOTE=1`을 설정합니다.
+- 이 경우에도 `git fetch`는 자동으로 하지 않으며, 로컬에 존재하는 `refs/remotes/origin/*`만 사용합니다.
 
 ### zsh 설치(옵트인)
 ```sh

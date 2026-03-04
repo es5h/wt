@@ -6,8 +6,12 @@
 - “Git 컨텍스트(repo root)”는 현재 디렉토리에서 `git rev-parse --show-toplevel`로 결정한다.
 
 ## Default worktree root
-- 기본 worktree 루트 경로 정책은 한 가지로 고정하고 문서화한다.
-  - 예: repo 상위 `../.wt/<repo>/...`
+현재 기본 정책:
+- 기본 생성 경로는 `<repo>/.wt/<branch>` 이다.
+- `.wt/`는 레포의 산출물/로컬 작업 디렉토리이므로 git에서 추적하지 않는다(`/.wt/`를 `.gitignore`에 추가).
+
+추후(초안):
+- 기본 레이아웃을 바꾸고 싶으면(예: `~/.wt/<project>/<branch>`), 명시적 오버라이드(플래그/환경변수/git config)를 통해 선택할 수 있게 한다.
 
 ## Overrides (opt-in)
 기본 정책은 재현성을 위해 고정하되, 사용자/팀 환경에 맞게 “명시적으로” 오버라이드할 수 있게 한다.
