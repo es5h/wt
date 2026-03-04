@@ -9,7 +9,12 @@
 
 ## Entry
 - `wt path --tui` → 전체 목록에서 선택
-- `wt path <query> --tui` → 필터링된 후보를 picker로 선택
+- `wt path <query> --tui` → 기존 `wt path` 매칭 결과가 2개 이상일 때만 picker로 선택
+
+query가 있을 때:
+- 매칭 0개: 기존 `no matches` 에러를 그대로 반환한다.
+- 매칭 1개: picker를 띄우지 않고 바로 path-only 출력한다.
+- 매칭 2개 이상: 해당 후보만 picker에 넣고, `query`를 초기 filter 값으로 사용한다.
 
 비활성 조건:
 - `stdin` 또는 화면 렌더링에 사용하는 `stderr`가 터미널이 아니면 TUI 실행 금지

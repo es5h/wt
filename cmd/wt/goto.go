@@ -63,8 +63,19 @@ func newPathCmd() *cobra.Command {
 				return err
 			}
 
+			matches := matchWorktrees(wts, query)
 			if tui {
-				chosen, err := selectWorktreeWithTUI(cmd, d, "wt path", wts, query)
+				var chosen worktree.Worktree
+				switch {
+				case query == "":
+					chosen, err = selectWorktreeWithTUI(cmd, d, "wt path", wts, "")
+				case len(matches) == 0:
+					return &exitError{Code: 1, Err: fmt.Errorf("wt path: no matches for %q", query)}
+				case len(matches) == 1:
+					chosen = matches[0]
+				default:
+					chosen, err = selectWorktreeWithTUI(cmd, d, "wt path", matches, query)
+				}
 				if err != nil {
 					return err
 				}
@@ -93,8 +104,6 @@ func newPathCmd() *cobra.Command {
 					return err
 				}
 			}
-
-			matches := matchWorktrees(wts, query)
 			if len(matches) == 0 {
 				if !create {
 					return &exitError{Code: 1, Err: fmt.Errorf("wt path: no matches for %q", query)}

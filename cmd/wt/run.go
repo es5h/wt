@@ -122,6 +122,14 @@ func formatAmbiguousSelection(commandName string, query string, matches []worktr
 	for _, wt := range matches {
 		fmt.Fprintf(&b, "  - %s (%s)\n", wt.Path, displayBranch(wt))
 	}
-	b.WriteString("hint: use a more specific query (TUI selection is not implemented yet)")
+	if commandName == "wt path" {
+		b.WriteString("hint: use a more specific query or rerun with --tui")
+		return b.String()
+	}
+	if commandName == "wt run" {
+		b.WriteString("hint: use a more specific query, or resolve the path first with `wt path <query> --tui`")
+		return b.String()
+	}
+	b.WriteString("hint: use a more specific query")
 	return b.String()
 }

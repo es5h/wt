@@ -3,8 +3,8 @@
 이 문서는 사용자에게 보이는 변경사항을 기록합니다. (README에는 패치 노트를 쓰지 않음)
 
 ## Unreleased
-- 2026-03-05: `wt path --tui`와 공통 TUI picker 기반 추가(현재 repo worktree 단일 선택, 실시간 필터, 화살표/Ctrl+n/Ctrl+p/PageUp/PageDown 이동, 취소 시 exit code `130`; non-TTY에서는 실행 거부, 화면은 stderr에 렌더링)
 - 2026-03-05: `wt path`/`wt create`의 create 정책을 registered worktree 기준으로 명확화. 일반 `wt path`는 계속 `git worktree list`의 registered path를 그대로 반환하고 filesystem scan을 하지 않으며, `wt path --create`/`wt create`는 로컬 브랜치만 있는 경우 기존 브랜치를 attach 하고, 동일 브랜치 또는 query에 대응되는 registered `prunable` entry가 있으면 자동 복구 대신 `wt prune --apply`를 안내하며 실패
+- 2026-03-05: `wt path --tui`와 공통 TUI picker 기반 추가(`query` 없으면 전체 worktree 선택, `query` 있으면 기존 매칭 규칙을 먼저 적용해 다중 후보일 때만 picker 표시, 단일 후보는 즉시 path-only 출력; 취소 시 exit code `130`; non-TTY에서는 실행 거부, 화면은 stderr에 렌더링)
 - 2026-03-05: `wt cleanup` 추가(`wt list`의 `recommendedAction`을 preview/apply로 연결, 기본 preview-only, `--apply`일 때만 prune/remove 실행, text/JSON 모두 remove 근거에서 로컬 git merged와 hosting merged를 계속 분리)
 - 2026-03-05: fix: linked worktree 안에서 `wt root`가 현재 linked worktree path 대신 primary repo root를 출력하도록 수정
 - 2026-03-05: `wt remove` 추가(기본 `--dry-run` preview-only, `--force`는 즉시 삭제, interactive TTY에서는 확인 프롬프트 지원; current/primary worktree 제거 금지, `prunable` entry는 `wt prune`로 분리)
