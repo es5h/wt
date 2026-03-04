@@ -90,6 +90,9 @@ func createWorktreeFromList(ctx context.Context, d *deps, repoRoot string, prima
 	if err != nil {
 		return "", err
 	}
+	if err := preflightCreateTargetPath(commandName, targetPath); err != nil {
+		return "", err
+	}
 	for _, wt := range wts {
 		if wt.Branch == "refs/heads/"+branch && wt.Path != "" {
 			return wt.Path, nil
