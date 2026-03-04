@@ -34,7 +34,8 @@
 
 옵션(초안):
 - `--create`: query에 해당하는 브랜치 worktree가 없으면 생성
-- `--path <dir>`: `--create` 시 생성 경로 지정(기본: `<repo>/.wt/<branch>`)
+- `--path <dir>`: `--create` 시 생성 경로를 직접 지정
+- `--root <dir>`: `--create` 시 기본 생성 경로의 root 지정. 우선순위는 `--root` > `WT_ROOT` > repo-local git config `wt.root` > `<repo>/.wt`
 - `--from <ref>`: `--create` 시 새 브랜치의 start point 지정(기본: `origin/<branch>`가 있으면 그걸 사용, 없으면 `origin/HEAD` 또는 `main`)
 - `--tui`: 후보가 여러 개면 TUI로 선택(비-interactive 환경이면 에러)
 - `--no-tui`: 후보가 여러 개면 에러(스크립트 안전)
@@ -65,12 +66,14 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 목표: `<branch>`에 대한 worktree를 생성한다.
 
 옵션(초안):
-- `--path <dir>`: 생성 경로 지정(기본은 정책에 따름)
+- `--path <dir>`: 생성 경로를 직접 지정
+- `--root <dir>`: 기본 생성 경로의 root 지정. 우선순위는 `--root` > `WT_ROOT` > repo-local git config `wt.root` > `<repo>/.wt`
 - `--from <ref>`: 새 브랜치의 start point 지정(기본: `origin/HEAD` 또는 `main`)
 - `--dry-run`: 실행될 git 커맨드/경로만 출력(변경 없음)
 
 현재 구현 규칙:
 - 기본 생성 경로: `<repo>/.wt/<branch>`
+- `--root`, `WT_ROOT`, `wt.root`가 상대 경로이면 repo root 기준으로 해석한다.
 - 로컬 브랜치가 이미 존재하면: `git worktree add <path> <branch>`
 - 로컬 브랜치가 없고 `origin/<branch>`가 존재하면: `git worktree add -b <branch> <path> origin/<branch>`
 - 둘 다 없으면: `git worktree add -b <branch> <path> <from>`
