@@ -56,6 +56,7 @@ repo-local git config 예시:
 - `wt list --verify-hosting`
 - provider 자동 감지(`origin` remote URL 기준)
 - GitHub만 실제 조회 지원 (`gh` CLI + 로그인된 세션 필요)
+- `gh` 바이너리는 `WT_GH_BIN`, `PATH`, `GOPATH/bin/gh`, `~/go/bin/gh` 순서로 탐색
 - 실패 시 hard error 대신 결과를 `null` + reason으로 반환
 
 현재 out-of-scope:

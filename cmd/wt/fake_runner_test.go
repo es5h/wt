@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -39,4 +41,15 @@ func (f *fakeRunner) Run(_ context.Context, workDir string, name string, args ..
 	}
 
 	return want.res, want.err
+}
+
+func writeExecutableStub(t *testing.T, path string) {
+	t.Helper()
+
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("os.MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatalf("os.WriteFile() error = %v", err)
+	}
 }

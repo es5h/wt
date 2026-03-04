@@ -3,6 +3,9 @@ package hosting
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"wt/internal/runner"
@@ -50,7 +53,12 @@ func verifyGitHubMerged(ctx context.Context, r runner.Runner, repoRoot string, b
 		return VerifyResult{Provider: ProviderGitHub, Reason: "no-branch"}, nil
 	}
 
-	if _, err := r.Run(ctx, repoRoot, "gh", "auth", "status"); err != nil {
+	ghBin, ok := findGitHubCLI()
+	if !ok {
+		return VerifyResult{Provider: ProviderGitHub, Reason: "gh-auth-unavailable"}, nil
+	}
+
+	if _, err := r.Run(ctx, repoRoot, ghBin, "auth", "status"); err != nil {
 		return VerifyResult{Provider: ProviderGitHub, Reason: "gh-auth-unavailable"}, nil
 	}
 
@@ -59,7 +67,7 @@ func verifyGitHubMerged(ctx context.Context, r runner.Runner, repoRoot string, b
 		args = append(args, "--base", shortBase)
 	}
 
-	res, err := r.Run(ctx, repoRoot, "gh", args...)
+	res, err := r.Run(ctx, repoRoot, ghBin, args...)
 	if err != nil {
 		return VerifyResult{Provider: ProviderGitHub, Reason: "gh-pr-query-failed"}, nil
 	}
@@ -73,6 +81,39 @@ func verifyGitHubMerged(ctx context.Context, r runner.Runner, repoRoot string, b
 
 	merged := len(prs) > 0
 	return VerifyResult{Provider: ProviderGitHub, Merged: &merged}, nil
+}
+
+func findGitHubCLI() (string, bool) {
+	if explicit := strings.TrimSpace(os.Getenv("WT_GH_BIN")); explicit != "" {
+		if fileExists(explicit) {
+			return explicit, true
+		}
+	}
+
+	if path, err := exec.LookPath("gh"); err == nil {
+		return path, true
+	}
+
+	if gopath := strings.TrimSpace(os.Getenv("GOPATH")); gopath != "" {
+		candidate := filepath.Join(gopath, "bin", "gh")
+		if fileExists(candidate) {
+			return candidate, true
+		}
+	}
+
+	if home, err := os.UserHomeDir(); err == nil && strings.TrimSpace(home) != "" {
+		candidate := filepath.Join(home, "go", "bin", "gh")
+		if fileExists(candidate) {
+			return candidate, true
+		}
+	}
+
+	return "", false
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }
 
 func shortRefName(ref string) string {

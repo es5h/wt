@@ -362,10 +362,11 @@ branch refs/heads/feature-x
 }
 
 func TestList_VerifyHosting_GitHubMergedPR(t *testing.T) {
-	t.Parallel()
-
 	const cwd = "/cwd"
 	const repo = "/repo"
+	ghBin := filepath.Join(t.TempDir(), "gh")
+	writeExecutableStub(t, ghBin)
+	t.Setenv("WT_GH_BIN", ghBin)
 
 	wtPath := filepath.Join(t.TempDir(), "feature-x")
 	if err := os.MkdirAll(filepath.Join(wtPath, ".git"), 0o755); err != nil {
@@ -415,13 +416,13 @@ branch refs/heads/feature-x
 				},
 				{
 					workDir: repo,
-					name:    "gh",
+					name:    ghBin,
 					args:    []string{"auth", "status"},
 					res:     runner.Result{ExitCode: 0},
 				},
 				{
 					workDir: repo,
-					name:    "gh",
+					name:    ghBin,
 					args:    []string{"pr", "list", "--state", "merged", "--head", "feature-x", "--json", "number", "--limit", "1", "--base", "main"},
 					res:     runner.Result{Stdout: []byte(`[{"number":1}]`), ExitCode: 0},
 				},
@@ -443,10 +444,11 @@ branch refs/heads/feature-x
 }
 
 func TestList_VerifyHosting_JSONUnavailable(t *testing.T) {
-	t.Parallel()
-
 	const cwd = "/cwd"
 	const repo = "/repo"
+	ghBin := filepath.Join(t.TempDir(), "gh")
+	writeExecutableStub(t, ghBin)
+	t.Setenv("WT_GH_BIN", ghBin)
 
 	wtPath := filepath.Join(t.TempDir(), "feature-x")
 	if err := os.MkdirAll(filepath.Join(wtPath, ".git"), 0o755); err != nil {
@@ -496,7 +498,7 @@ branch refs/heads/feature-x
 				},
 				{
 					workDir: repo,
-					name:    "gh",
+					name:    ghBin,
 					args:    []string{"auth", "status"},
 					res:     runner.Result{ExitCode: 1},
 					err:     errors.New("exit 1"),
