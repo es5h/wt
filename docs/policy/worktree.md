@@ -5,6 +5,11 @@
 ## Git context
 - “Git 컨텍스트(repo root)”는 현재 디렉토리에서 `git rev-parse --show-toplevel`로 결정한다.
 
+## Registered worktree matching
+- `wt path` 계열의 선택 기준은 filesystem scan이 아니라 `git worktree list`에 등록된 entry다.
+- 기본 `wt path`는 path-only 철학을 유지하기 위해, `wt list --verify` 없이 path 존재 여부나 `.git` 상태를 추가 검사하지 않는다.
+- 즉, `wt path`는 “현재 등록된 worktree path를 고르는 명령”이고, filesystem 검증/정리 신호는 `wt list --verify`/`wt prune`가 담당한다.
+
 ## Default worktree root
 기본 생성 경로 정책:
 - 기본 생성 경로는 `<primary-root>/.wt/<branch>` 이다.
@@ -48,6 +53,14 @@ repo-local git config 예시:
 - 브랜치명 → 폴더명 정규화 규칙을 유틸로 통일한다.
   - 현재 기본 경로는 git 브랜치의 `/`를 하위 디렉토리로 유지해 `<root>/<branch>` 형태를 만든다.
   - 절대 경로/상위 디렉토리 탈출(`..`)이 되는 브랜치명은 기본 경로 계산에 사용할 수 없다.
+
+## Create safety
+- `wt create`와 `wt path --create`는 생성 전에 먼저 `git worktree list`의 registered entry를 확인한다.
+- 동일 브랜치의 live registered worktree가 있으면 새 worktree를 만들지 않고 그 registered path를 반환한다.
+- 로컬 브랜치가 이미 있고 live registered worktree만 없는 경우에는 새 브랜치를 만들지 않는다. `git worktree add <path> <branch>`로 해당 로컬 브랜치를 attach/check out 한다.
+- 로컬 브랜치가 없고 `origin/<branch>`만 있으면 `git worktree add -b <branch> <path> origin/<branch>`를 사용한다.
+- 동일 브랜치 또는 query에 대응되는 registered `prunable` entry가 있으면, 자동 생성/복구를 하지 않고 명시적으로 실패시킨다.
+- 이 경우 사용자는 먼저 `wt prune --apply`로 stale registered entry를 정리해야 한다.
 
 ## Hosting verify scope
 호스팅(PR/MR) merged 여부는 로컬 git 검증과 분리된 opt-in 기능으로 다룬다.

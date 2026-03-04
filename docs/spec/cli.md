@@ -43,7 +43,6 @@
   - 텍스트: `[merged-hosting:<provider>]`
   - JSON: `hostingProvider`, `hostingKind`, `mergedViaHosting`, `hostingReason`, `hostingChangeNumber`, `hostingChangeTitle`, `hostingChangeUrl`
 - provider 감지는 `origin` remote URL 기준 자동 감지다.
-<<<<<<< HEAD
 - GitLab remote는 merged MR이 확인되면 `hostingProvider=gitlab`, `hostingKind=mr`, `hostingChangeNumber`(MR IID), `hostingChangeTitle`, `hostingChangeUrl`를 채운다.
 - GitHub/GitLab 조회가 불가능하면 provider/kind는 유지하고 `mergedViaHosting=null`, `hostingReason`으로 degrade 한다.
 - 파생 신호는 기본 text/JSON에 항상 포함한다:
@@ -53,10 +52,6 @@
   - `safeToRemove`는 `prunable`, `current`, `primary`, `detached`, `locked`, `missing-path`, `missing-git`가 아닌 항목 중 로컬 git merged 또는 hosting merged가 확인된 경우만 `true`다.
   - `recommendedAction=prune`은 stale/prunable 엔트리 정리 검토를 뜻한다.
   - `recommendedAction=remove`는 linked worktree 디렉토리 제거 검토를 뜻하며, 로컬 git merged와 hosting merged의 의미 차이는 기존 필드(`mergedIntoBase`, `mergedViaHosting`)로 계속 분리한다.
-=======
-- GitLab remote는 merged MR이 확인되면 `hostingProvider=gitlab`, `hostingKind=mr`, `hostingChangeNumber`(MR IID), `hostingChangeTitle`, `hostingChangeUrl`를 채운다.
-- GitHub/GitLab 조회가 불가능하면 provider/kind는 유지하고 `mergedViaHosting=null`, `hostingReason`으로 degrade 한다.
->>>>>>> 4311044 (feat(list): add GitLab hosting verify support)
 
 `--json --verify` 출력 규칙:
 - 각 항목은 항상 `pathExists`, `dotGitExists`, `valid`, `mergedIntoBase`, `baseRef` 필드를 포함한다.
@@ -71,6 +66,7 @@
 목표: query로 worktree를 선택하고 “경로”를 stdout으로 출력한다.
 
 규칙:
+- 선택 기준은 filesystem scan이 아니라 현재 Git 컨텍스트의 `git worktree list`에 등록된 entry다.
 - 기본 모드는 **경로만 출력**한다(추가 텍스트/색상 금지).
 - `query` 없이 실행하려면 `--tui`가 필요하다.
 - 후보가 0개면 non-zero exit + stderr에 후보/가이드 출력.
@@ -99,6 +95,12 @@
 - `--path`, `--root`, `--from`은 `--create`가 있을 때만 허용한다.
 - `query` 없이 `--no-tui`만 주는 조합은 허용하지 않는다.
 - 후보가 2개 이상이고 `--tui`가 없으면 기본 동작은 계속 “에러 + 후보 출력”이다.
+- 일반 `wt path <query>`는 계속 registered worktree path를 그대로 반환한다. `wt list --verify` 없이 filesystem 상태를 추가 검사하지 않는다.
+- `wt path --create`는 생성 전에 `git worktree list`에 남아 있는 registered entry를 먼저 본다.
+  - 동일 브랜치의 live registered worktree가 있으면 그 path를 반환한다.
+  - 로컬 브랜치가 이미 있고 live registered worktree만 없는 경우에는 새 브랜치를 만들지 않고 `git worktree add <path> <branch>`로 attach/check out 한다.
+  - 로컬 브랜치가 없고 `origin/<branch>`가 있으면 `git worktree add -b <branch> <path> origin/<branch>`를 사용한다.
+  - 동일 브랜치 또는 query에 대응되는 registered `prunable` entry가 있으면 자동 생성/복구를 하지 않고 실패하며 `wt prune --apply`를 안내한다.
 
 TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 
@@ -140,9 +142,12 @@ TUI 동작/키바인딩 상세는 `docs/ux/tui.md` 참고.
 현재 구현 규칙:
 - 기본 생성 경로: `<primary-root>/.wt/<branch>`
 - `--root`, `WT_ROOT`, `wt.root`가 상대 경로이면 `<primary-root>` 기준으로 해석한다.
-- 로컬 브랜치가 이미 존재하면: `git worktree add <path> <branch>`
+- 생성 기준은 filesystem scan이 아니라 `git worktree list`의 registered entry다.
+- 동일 브랜치의 live registered worktree가 이미 존재하면 그 path를 그대로 반환한다.
+- 로컬 브랜치가 이미 존재하고 live registered worktree만 없으면: `git worktree add <path> <branch>`
 - 로컬 브랜치가 없고 `origin/<branch>`가 존재하면: `git worktree add -b <branch> <path> origin/<branch>`
 - 둘 다 없으면: `git worktree add -b <branch> <path> <from>`
+- 동일 브랜치의 registered `prunable` entry가 남아 있으면 자동 생성/복구를 하지 않고 실패하며 `wt prune --apply`를 안내한다.
 
 ## `wt remove <name>`
 목표: worktree를 제거한다.
