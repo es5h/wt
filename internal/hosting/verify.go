@@ -3,6 +3,7 @@ package hosting
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -45,7 +46,7 @@ func VerifyMerged(ctx context.Context, r runner.Runner, repoRoot string, provide
 	case ProviderGitHub:
 		return verifyGitHubMerged(ctx, r, repoRoot, branch, baseRef)
 	case ProviderGitLab:
-		return VerifyResult{Provider: ProviderGitLab, Kind: "mr", Reason: "unsupported-provider"}, nil
+		return verifyGitLabMerged(ctx, r, repoRoot, branch, baseRef)
 	default:
 		return VerifyResult{Provider: provider, Kind: "unknown", Reason: "unsupported-provider"}, nil
 	}
@@ -94,12 +95,64 @@ func verifyGitHubMerged(ctx context.Context, r runner.Runner, repoRoot string, b
 	return result, nil
 }
 
+func verifyGitLabMerged(ctx context.Context, r runner.Runner, repoRoot string, branch string, baseRef string) (VerifyResult, error) {
+	if strings.TrimSpace(branch) == "" {
+		return VerifyResult{Provider: ProviderGitLab, Kind: "mr", Reason: "no-branch"}, nil
+	}
+
+	glabBin, ok := findGitLabCLI()
+	if !ok {
+		return VerifyResult{Provider: ProviderGitLab, Kind: "mr", Reason: "glab-auth-unavailable"}, nil
+	}
+
+	if _, err := r.Run(ctx, repoRoot, glabBin, "auth", "status"); err != nil {
+		return VerifyResult{Provider: ProviderGitLab, Kind: "mr", Reason: "glab-auth-unavailable"}, nil
+	}
+
+	endpoint := "projects/:fullpath/merge_requests?state=merged&source_branch=" + url.QueryEscape(branch) + "&per_page=1&order_by=updated_at&sort=desc"
+	if shortBase := shortRefName(baseRef); shortBase != "" {
+		endpoint += "&target_branch=" + url.QueryEscape(shortBase)
+	}
+
+	res, err := r.Run(ctx, repoRoot, glabBin, "api", endpoint)
+	if err != nil {
+		return VerifyResult{Provider: ProviderGitLab, Kind: "mr", Reason: "glab-mr-query-failed"}, nil
+	}
+
+	var mrs []struct {
+		IID      int    `json:"iid"`
+		Title    string `json:"title"`
+		WebURL   string `json:"web_url"`
+		MergedAt string `json:"merged_at"`
+	}
+	if err := json.Unmarshal(res.Stdout, &mrs); err != nil {
+		return VerifyResult{Provider: ProviderGitLab, Kind: "mr", Reason: "glab-invalid-json"}, nil
+	}
+
+	merged := len(mrs) > 0 && strings.TrimSpace(mrs[0].MergedAt) != ""
+	result := VerifyResult{Provider: ProviderGitLab, Kind: "mr", Merged: &merged}
+	if merged {
+		result.Number = &mrs[0].IID
+		result.Title = strings.TrimSpace(mrs[0].Title)
+		result.URL = strings.TrimSpace(mrs[0].WebURL)
+	}
+	return result, nil
+}
+
 func findGitHubCLI() (string, bool) {
-	if explicit := strings.TrimSpace(os.Getenv("WT_GH_BIN")); explicit != "" {
+	return findCLI("WT_GH_BIN", "gh")
+}
+
+func findGitLabCLI() (string, bool) {
+	return findCLI("WT_GLAB_BIN", "glab")
+}
+
+func findCLI(explicitEnv string, defaultName string) (string, bool) {
+	if explicit := strings.TrimSpace(os.Getenv(explicitEnv)); explicit != "" {
 		return explicit, true
 	}
 
-	if path, err := exec.LookPath("gh"); err == nil {
+	if path, err := exec.LookPath(defaultName); err == nil {
 		return path, true
 	}
 
