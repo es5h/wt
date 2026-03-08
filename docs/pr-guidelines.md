@@ -55,22 +55,46 @@
 - 사용자-facing PR이면 포함한다.
 - 불필요하면 `N/A`와 이유를 적는다.
 
+## Agent E2E Execution Policy
+
+- 사용자-facing PR에서는 E2E 가이드를 작성만 하지 말고, 에이전트가 실제로 실행한다.
+- 구현 작업은 기본적으로 `wt` 분리 워크트리에서 진행한다.
+  - 예: `wt path --create <branch>`
+- PR 본문 `E2E guide` 섹션에는 아래를 반드시 포함한다.
+  - 실행한 명령 목록
+  - 각 명령의 exit code
+  - stdout/stderr 핵심 요약
+  - 실행 환경(현재 repo / 임시 repo)
+  - 실패 또는 스킵한 항목과 사유
+- `--tui` 검증은 실제 TTY에서만 수행한다.
+  - 비-TTY 환경이면 스킵 사유와 대체 검증 명령을 함께 적는다.
+
 ## E2E Guide Examples
 
 ### Option A: 현재 repo에서 빠르게 확인
 
 ```sh
+wt path --create <branch>
 make run ARGS="list --verify"
 make run ARGS="root"
-make run ARGS="path --tui"
-make run ARGS="remove --tui --dry-run"
-make run ARGS="prune --tui"
+make run ARGS="path main"
+make run ARGS="path --json main"
+make run ARGS="remove main --dry-run"
+make run ARGS="prune"
 ```
 
 주의:
 
-- `--tui` 예시는 실제 TTY에서 실행해야 한다.
-- 현재 repo 상태에 따라 `prune` 후보가 없거나 `path` query가 모호하지 않을 수 있다.
+- 현재 repo 상태에 따라 `path main`이 없거나 `prune` 후보가 없을 수 있다.
+- 이 경우 실패/스킵 사유를 PR 본문에 기록한다.
+
+TTY 환경이면 아래를 추가로 실행한다.
+
+```sh
+make run ARGS="path --tui"
+make run ARGS="remove --tui --dry-run"
+make run ARGS="prune --tui"
+```
 
 ### Option B: 임시 repo로 재현
 

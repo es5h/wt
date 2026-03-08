@@ -18,6 +18,8 @@
 - stdout/stderr/exit code 계약이 바뀌면 PR 본문에 명시한다.
 - 머지 게이트(`make premerge`)를 통과시킨다.
 - 불확실한 내용은 추측으로 문서화하지 않는다.
+- 구현 작업은 기본적으로 `wt` 분리 워크트리에서 진행한다.
+- 사용자-facing 변경 PR에서는 E2E 명령을 실제 실행하고 결과를 PR 본문에 남긴다.
 
 ## Template
 
@@ -66,6 +68,18 @@
 ## Validation
 - 필수 검증: <verification_command>
 
+## E2E Execution Requirements
+- 작업 분리: <wt_split_command>
+- 실행 명령:
+  - <e2e_command_1>
+  - <e2e_command_2>
+- 결과 기록:
+  - 각 명령의 exit code
+  - stdout/stderr 핵심 요약
+  - 실패/스킵 사유
+- TUI 항목 처리:
+  - <tui_execution_or_skip_rule>
+
 ## Constraints
 - 금지: <unrelated_refactor_destructive_changes>
 - 유지: <existing_policy_to_keep>
@@ -80,6 +94,7 @@
 - [ ] 테스트 통과
 - [ ] 문서/릴리즈노트 동기화
 - [ ] 검증 명령 통과
+- [ ] E2E 실행 결과(명령/exit code/요약/스킵 사유) 기록
 ```
 
 ## Filled example (this repo style)
