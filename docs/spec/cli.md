@@ -8,6 +8,7 @@
 - 정상 출력은 `stdout`, 에러와 note는 `stderr`를 사용한다.
 - 사람이 보는 출력과 스크립트 출력이 충돌하면 `--json` 또는 `--porcelain`을 제공한다.
 - 경로를 돌려주는 명령(`wt path`, `wt root`, `wt create`)의 기본 출력은 path-only 다.
+- `--tui` 화면에서 긴 줄(branch/path/help/filter)은 현재 터미널 가로폭에 맞춰 말줄임(`...`) 처리한다.
 
 ## `wt list`
 
