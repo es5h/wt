@@ -14,7 +14,8 @@
 ## Merge Gate
 
 - 머지 전 기준은 `make premerge` 통과다.
-- 사용자-facing 변경이 있으면 `VERSION` bump 필요 여부도 같이 판단한다.
+- 사용자-facing 변경이 있으면 같은 PR에서 `VERSION`을 반드시 bump 한다.
+  - 기본값은 `PATCH` bump이고, 호환성/기능 변화 규모에 따라 `MINOR`/`MAJOR`를 선택한다.
 - 문서 정합성 PR이라도, 어떤 실제 구현 상태를 기준으로 문서를 맞췄는지 PR 본문에서 분명히 적는다.
 
 ## Recommended PR Body Sections

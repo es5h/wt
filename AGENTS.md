@@ -65,7 +65,7 @@
 ## Merge gate (to main)
 - main에 머지(또는 PR ready) 전에 `make premerge`를 통과시킨다.
 - 사용자에게 보이는 변경(명령/옵션/출력/기본값)이 포함되면:
-  - `VERSION` bump 여부를 판단하고 반영한다.
+  - 같은 PR에서 `VERSION`을 반드시 bump 한다(기본은 `PATCH`, 필요 시 `MINOR`/`MAJOR`).
   - `docs/release/notes.md`의 `Unreleased`에 변경사항을 추가한다.
 
 ## PR guidelines
