@@ -90,20 +90,23 @@ func Run(input *os.File, screen *os.File, cfg Config) (Item, error) {
 }
 
 func render(screen *os.File, cfg Config, model *Model) error {
-	_, rows, err := term.GetSize(int(screen.Fd()))
+	cols, rows, err := term.GetSize(int(screen.Fd()))
 	if err != nil || rows < 6 {
 		rows = 12
+	}
+	if err != nil || cols < 20 {
+		cols = 80
 	}
 	listHeight := max(rows-4, 1)
 
 	view := model.View(listHeight)
 	var b bytes.Buffer
 	b.WriteString("\x1b[H\x1b[2J")
-	fmt.Fprintf(&b, "%s\n", firstNonEmpty(cfg.Title, "Select worktree"))
-	fmt.Fprintf(&b, "Filter: %s\n", view.Filter)
+	writeLine(&b, fitLine(firstNonEmpty(cfg.Title, "Select worktree"), cols))
+	writeLine(&b, fitLine("Filter: "+view.Filter, cols))
 
 	if view.MatchCount == 0 {
-		b.WriteString("  no matches\n")
+		writeLine(&b, fitLine("  no matches", cols))
 	} else {
 		for _, item := range view.Items {
 			prefix := "  "
@@ -114,22 +117,52 @@ func render(screen *os.File, cfg Config, model *Model) error {
 			if item.Item.Meta != "" {
 				line += " [" + item.Item.Meta + "]"
 			}
-			fmt.Fprintf(&b, "%s%s\n", prefix, line)
+			writeLine(&b, fitPrefixedLine(prefix, line, cols))
 			if item.Item.Detail != "" {
-				fmt.Fprintf(&b, "    %s\n", item.Item.Detail)
+				writeLine(&b, fitPrefixedLine("    ", item.Item.Detail, cols))
 			}
 		}
 	}
 
-	fmt.Fprintf(&b, "%d/%d matches", view.MatchCount, view.Total)
+	status := fmt.Sprintf("%d/%d matches", view.MatchCount, view.Total)
 	help := strings.TrimSpace(cfg.Help)
 	if help != "" {
-		fmt.Fprintf(&b, " | %s", help)
+		status += " | " + help
 	}
-	b.WriteString("\n")
+	writeLine(&b, fitLine(status, cols))
 
 	_, err = screen.Write(b.Bytes())
 	return err
+}
+
+func writeLine(b *bytes.Buffer, line string) {
+	b.WriteString(line)
+	b.WriteString("\r\n")
+}
+
+func fitPrefixedLine(prefix string, content string, width int) string {
+	prefixRunes := []rune(prefix)
+	if width <= 0 {
+		return ""
+	}
+	if len(prefixRunes) >= width {
+		return fitLine(prefix, width)
+	}
+	return prefix + fitLine(content, width-len(prefixRunes))
+}
+
+func fitLine(value string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	runes := []rune(value)
+	if len(runes) <= width {
+		return value
+	}
+	if width <= 3 {
+		return string(runes[:width])
+	}
+	return string(runes[:width-3]) + "..."
 }
 
 func readInput(byteCh <-chan byte, errCh <-chan error) (Input, error) {
