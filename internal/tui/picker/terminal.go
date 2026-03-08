@@ -102,11 +102,11 @@ func render(screen *os.File, cfg Config, model *Model) error {
 	view := model.View(listHeight)
 	var b bytes.Buffer
 	b.WriteString("\x1b[H\x1b[2J")
-	fmt.Fprintf(&b, "%s\n", fitLine(firstNonEmpty(cfg.Title, "Select worktree"), cols))
-	fmt.Fprintf(&b, "%s\n", fitLine("Filter: "+view.Filter, cols))
+	writeLine(&b, fitLine(firstNonEmpty(cfg.Title, "Select worktree"), cols))
+	writeLine(&b, fitLine("Filter: "+view.Filter, cols))
 
 	if view.MatchCount == 0 {
-		fmt.Fprintf(&b, "%s\n", fitLine("  no matches", cols))
+		writeLine(&b, fitLine("  no matches", cols))
 	} else {
 		for _, item := range view.Items {
 			prefix := "  "
@@ -117,9 +117,9 @@ func render(screen *os.File, cfg Config, model *Model) error {
 			if item.Item.Meta != "" {
 				line += " [" + item.Item.Meta + "]"
 			}
-			fmt.Fprintf(&b, "%s\n", fitPrefixedLine(prefix, line, cols))
+			writeLine(&b, fitPrefixedLine(prefix, line, cols))
 			if item.Item.Detail != "" {
-				fmt.Fprintf(&b, "%s\n", fitPrefixedLine("    ", item.Item.Detail, cols))
+				writeLine(&b, fitPrefixedLine("    ", item.Item.Detail, cols))
 			}
 		}
 	}
@@ -129,10 +129,15 @@ func render(screen *os.File, cfg Config, model *Model) error {
 	if help != "" {
 		status += " | " + help
 	}
-	fmt.Fprintf(&b, "%s\n", fitLine(status, cols))
+	writeLine(&b, fitLine(status, cols))
 
 	_, err = screen.Write(b.Bytes())
 	return err
+}
+
+func writeLine(b *bytes.Buffer, line string) {
+	b.WriteString(line)
+	b.WriteString("\r\n")
 }
 
 func fitPrefixedLine(prefix string, content string, width int) string {
