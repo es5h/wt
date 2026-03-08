@@ -56,15 +56,22 @@
 - 사용자-facing PR이면 포함한다.
 - 불필요하면 `N/A`와 이유를 적는다.
 
+### E2E Done
+
+- `E2E guide` 아래에 실행 완료 체크리스트 섹션으로 추가한다.
+- 각 실행 항목에 `완료/스킵`, `exit code`, `stdout/stderr 핵심 요약`, `근거(evidence)`를 남긴다.
+
 ## Agent E2E Execution Policy
 
 - 사용자-facing PR에서는 E2E 가이드를 작성만 하지 말고, 에이전트가 실제로 실행한다.
 - 구현 작업은 기본적으로 `wt` 분리 워크트리에서 진행한다.
   - 예: `wt path --create <branch>`
-- PR 본문 `E2E guide` 섹션에는 아래를 반드시 포함한다.
+- PR 본문 `E2E guide`/`E2E Done` 섹션에는 아래를 반드시 포함한다.
   - 실행한 명령 목록
   - 각 명령의 exit code
   - stdout/stderr 핵심 요약
+  - 완료/스킵 상태
+  - 실행 근거(evidence: 로그 요약, 캡처, 코멘트 링크 등)
   - 실행 환경(현재 repo / 임시 repo)
   - 실패 또는 스킵한 항목과 사유
 - `--tui` 검증은 실제 TTY에서만 수행한다.

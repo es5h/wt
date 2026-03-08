@@ -86,8 +86,9 @@
 - 유지: <existing_policy_to_keep>
 
 ## PR body requirements
-- Summary, User impact, Behavior, Safety, Tests, E2E guide 섹션을 모두 포함한다.
+- Summary, User impact, Behavior, Safety, Tests, E2E guide, E2E Done 섹션을 모두 포함한다.
 - 사용자-facing 변경이면 E2E guide를 생략하지 않는다.
+- 사용자-facing 변경이면 E2E Done에서 실행 결과를 체크리스트로 남긴다.
 - 예시에는 민감정보/로컬 절대경로를 넣지 않는다.
 
 ## Definition of Done
