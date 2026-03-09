@@ -20,6 +20,7 @@
 - 불확실한 내용은 추측으로 문서화하지 않는다.
 - 구현 작업은 기본적으로 `wt` 분리 워크트리에서 진행한다.
 - 사용자-facing 변경 PR에서는 E2E 명령을 실제 실행하고 결과를 PR 본문에 남긴다.
+- 사용자-facing 변경 PR에서는 같은 PR에서 `VERSION`을 반드시 bump 한다.
 
 ## Template
 
@@ -85,14 +86,16 @@
 - 유지: <existing_policy_to_keep>
 
 ## PR body requirements
-- Summary, User impact, Behavior, Safety, Tests, E2E guide 섹션을 모두 포함한다.
+- Summary, User impact, Behavior, Safety, Tests, E2E guide, E2E Done 섹션을 모두 포함한다.
 - 사용자-facing 변경이면 E2E guide를 생략하지 않는다.
+- 사용자-facing 변경이면 E2E Done에서 실행 결과를 체크리스트로 남긴다.
 - 예시에는 민감정보/로컬 절대경로를 넣지 않는다.
 
 ## Definition of Done
 - [ ] 기능 계약 충족
 - [ ] 테스트 통과
 - [ ] 문서/릴리즈노트 동기화
+- [ ] 사용자-facing 변경이면 `VERSION` bump 반영
 - [ ] 검증 명령 통과
 - [ ] E2E 실행 결과(명령/exit code/요약/스킵 사유) 기록
 ```
