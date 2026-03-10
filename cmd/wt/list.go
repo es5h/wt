@@ -21,6 +21,9 @@ func newListCmd() *cobra.Command {
 	var verify bool
 	var verifyHosting bool
 	var baseRef string
+	var staleFilter bool
+	var safeToRemoveFilter bool
+	var recommendedFilter string
 
 	cmd := &cobra.Command{
 		Use:           "list",
@@ -34,6 +37,14 @@ func newListCmd() *cobra.Command {
 			}
 			if porcelain && verifyHosting {
 				return usageError(fmt.Errorf("wt list: --porcelain cannot be combined with --verify-hosting"))
+			}
+
+			filters, err := parseListFilters(staleFilter, safeToRemoveFilter, recommendedFilter)
+			if err != nil {
+				return usageError(err)
+			}
+			if porcelain && filters.any() {
+				return usageError(fmt.Errorf("wt list: --porcelain cannot be combined with --stale, --safe-to-remove, or --recommended"))
 			}
 
 			d, err := getDeps(cmd)
@@ -89,7 +100,7 @@ func newListCmd() *cobra.Command {
 			if jsonOut {
 				enc := json.NewEncoder(cmd.OutOrStdout())
 				enc.SetIndent("", "  ")
-				return enc.Encode(toJSONWorktrees(cmd, d, wts, verifyCtx, paths))
+				return enc.Encode(toJSONWorktrees(cmd, d, wts, verifyCtx, paths, filters))
 			}
 
 			hostingNote := formatHostingVerifyNote(wts, d, verifyCtx)
@@ -99,7 +110,11 @@ func newListCmd() *cobra.Command {
 
 			for _, wt := range wts {
 				info, _ := verifyWorktree(cmd, d, verifyCtx, wt)
-				fmt.Fprintln(cmd.OutOrStdout(), formatWorktreeLine(wt, info, deriveListSignals(wt, info, paths)))
+				signals := deriveListSignals(wt, info, paths)
+				if !signalsMatchListFilters(signals, filters) {
+					continue
+				}
+				fmt.Fprintln(cmd.OutOrStdout(), formatWorktreeLine(wt, info, signals))
 			}
 			return nil
 		},
@@ -110,6 +125,9 @@ func newListCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&verify, "verify", false, "verify worktree entries (checks path and merged-to-base)")
 	cmd.Flags().BoolVar(&verifyHosting, "verify-hosting", false, "opt-in hosting merge verification (GitHub via gh, GitLab via glab)")
 	cmd.Flags().StringVar(&baseRef, "base", "", "base ref for --verify (default: origin/HEAD or main)")
+	cmd.Flags().BoolVar(&staleFilter, "stale", false, "show only stale worktrees")
+	cmd.Flags().BoolVar(&safeToRemoveFilter, "safe-to-remove", false, "show only safe-to-remove worktrees")
+	cmd.Flags().StringVar(&recommendedFilter, "recommended", "", "show only entries with recommended action (none|prune|remove)")
 	return cmd
 }
 
@@ -184,6 +202,16 @@ type listSignals struct {
 type listPaths struct {
 	CurrentWorktree string
 	PrimaryWorktree string
+}
+
+type listFilters struct {
+	StaleOnly        bool
+	SafeToRemoveOnly bool
+	Recommended      string
+}
+
+func (f listFilters) any() bool {
+	return f.StaleOnly || f.SafeToRemoveOnly || f.Recommended != ""
 }
 
 func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
@@ -300,11 +328,14 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 	return json.Marshal(out)
 }
 
-func toJSONWorktrees(cmd *cobra.Command, d *deps, wts []worktree.Worktree, verifyCtx *listVerifyContext, paths listPaths) []jsonWorktree {
+func toJSONWorktrees(cmd *cobra.Command, d *deps, wts []worktree.Worktree, verifyCtx *listVerifyContext, paths listPaths, filters listFilters) []jsonWorktree {
 	out := make([]jsonWorktree, 0, len(wts))
 	for _, wt := range wts {
 		info, _ := verifyWorktree(cmd, d, verifyCtx, wt)
 		signals := deriveListSignals(wt, info, paths)
+		if !signalsMatchListFilters(signals, filters) {
+			continue
+		}
 		jwt := jsonWorktree{
 			Path:              wt.Path,
 			HEAD:              wt.HEAD,
@@ -590,4 +621,34 @@ func samePath(a string, b string) bool {
 		return false
 	}
 	return filepath.Clean(a) == filepath.Clean(b)
+}
+
+func parseListFilters(staleOnly bool, safeToRemoveOnly bool, recommended string) (listFilters, error) {
+	out := listFilters{
+		StaleOnly:        staleOnly,
+		SafeToRemoveOnly: safeToRemoveOnly,
+	}
+	if recommended == "" {
+		return out, nil
+	}
+	switch recommended {
+	case "none", "prune", "remove":
+		out.Recommended = recommended
+		return out, nil
+	default:
+		return listFilters{}, fmt.Errorf("wt list: invalid --recommended value %q (expected: none, prune, remove)", recommended)
+	}
+}
+
+func signalsMatchListFilters(signals listSignals, filters listFilters) bool {
+	if filters.StaleOnly && !signals.Stale {
+		return false
+	}
+	if filters.SafeToRemoveOnly && !signals.SafeToRemove {
+		return false
+	}
+	if filters.Recommended != "" && signals.RecommendedAction != filters.Recommended {
+		return false
+	}
+	return true
 }
