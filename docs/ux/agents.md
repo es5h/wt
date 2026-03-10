@@ -95,3 +95,9 @@ wt-worktree 스킬을 사용해서 <task>
 - 새 자동화/에이전트 작업 PR에는 사용한 `wt` 명령과 exit code를 기록한다.
 - `wt upgrade`를 주기적으로 실행해 팀 에이전트 환경 버전을 맞춘다.
 - 사용자-facing 변경 시 `VERSION`, `docs/release/notes.md`, 관련 UX 문서를 함께 갱신한다.
+
+## References
+
+- Claude Code Agent Skills: `https://docs.claude.com/en/docs/claude-code/skills`
+- Claude Code Slash commands (Skills와 차이): `https://docs.claude.com/en/docs/claude-code/slash-commands`
+- Claude Code Subagents: `https://docs.anthropic.com/en/docs/claude-code/sub-agents`
