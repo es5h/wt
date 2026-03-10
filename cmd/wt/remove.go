@@ -17,6 +17,7 @@ type removeResult struct {
 	Path    string `json:"path"`
 	Branch  string `json:"branch,omitempty"`
 	Action  string `json:"action"`
+	Applied bool   `json:"applied"`
 	Removed bool   `json:"removed"`
 }
 
@@ -83,7 +84,8 @@ func newRemoveCmd() *cobra.Command {
 			result := removeResult{
 				Path:    chosen.Path,
 				Branch:  strings.TrimPrefix(chosen.Branch, "refs/heads/"),
-				Action:  "preview",
+				Action:  actionWouldRemove,
+				Applied: false,
 				Removed: false,
 			}
 
@@ -101,7 +103,8 @@ func newRemoveCmd() *cobra.Command {
 				if err := git.WorktreeRemove(ctx, d.Runner, repoRoot, chosen.Path, true); err != nil {
 					return err
 				}
-				result.Action = "remove"
+				result.Action = actionRemoved
+				result.Applied = true
 				result.Removed = true
 			}
 
@@ -111,11 +114,7 @@ func newRemoveCmd() *cobra.Command {
 				return enc.Encode(result)
 			}
 
-			status := "would-remove"
-			if result.Removed {
-				status = "removed"
-			}
-			line := fmt.Sprintf("%s  %s", status, result.Path)
+			line := fmt.Sprintf("%s  %s", result.Action, result.Path)
 			if result.Branch != "" {
 				line += fmt.Sprintf("  (%s)", result.Branch)
 			}

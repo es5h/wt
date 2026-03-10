@@ -239,9 +239,9 @@ func runCleanup(cmd *cobra.Command, d *deps, repoRoot string, candidates []clean
 		case "prune":
 			items[i].Applied = true
 			if _, ok := remainingAfterPrune[candidate.Worktree.Path]; ok {
-				items[i].Action = "kept"
+				items[i].Action = actionKept
 			} else {
-				items[i].Action = "pruned"
+				items[i].Action = actionPruned
 				items[i].Removed = true
 			}
 		case "remove":
@@ -251,7 +251,7 @@ func runCleanup(cmd *cobra.Command, d *deps, repoRoot string, candidates []clean
 			if err := git.WorktreeRemove(cmd.Context(), d.Runner, repoRoot, candidate.Worktree.Path, true); err != nil {
 				return nil, err
 			}
-			items[i].Action = "removed"
+			items[i].Action = actionRemoved
 			items[i].Applied = true
 			items[i].Removed = true
 		}
@@ -355,7 +355,7 @@ func buildCleanupReviewPickerItems(candidates []cleanupCandidate, selected map[s
 
 		action := candidate.Signals.RecommendedAction
 		if action == "" || action == "none" {
-			action = "skip"
+			action = actionSkip
 		}
 
 		prefix := "[ ]"
@@ -424,11 +424,11 @@ func cleanupItemForCandidate(candidate cleanupCandidate, applied bool) cleanupIt
 func cleanupPreviewAction(recommendedAction string) string {
 	switch recommendedAction {
 	case "prune":
-		return "would-prune"
+		return actionWouldPrune
 	case "remove":
-		return "would-remove"
+		return actionWouldRemove
 	default:
-		return "skip"
+		return actionSkip
 	}
 }
 

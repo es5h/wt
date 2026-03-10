@@ -225,3 +225,24 @@ branch refs/heads/feature-y
 		t.Fatalf("err = %q, want wt path --tui guidance", err.Error())
 	}
 }
+
+func TestRun_UsageErrorExitCode2(t *testing.T) {
+	t.Parallel()
+
+	root := newRootCmd()
+	root.SetArgs([]string{"run", "feature-x"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{}))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var exitErr *exitError
+	if !errors.As(err, &exitErr) || exitErr.Code != 2 {
+		t.Fatalf("err = %#v, want exitError code 2", err)
+	}
+	if !strings.Contains(err.Error(), "wt run: requires <query> and <cmd...>") {
+		t.Fatalf("err = %q, want usage message", err.Error())
+	}
+}
