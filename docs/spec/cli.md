@@ -10,6 +10,20 @@
 - 경로를 돌려주는 명령(`wt path`, `wt root`, `wt create`)의 기본 출력은 path-only 다.
 - `--tui` 화면에서 긴 줄(branch/path/help/filter)은 현재 터미널 가로폭에 맞춰 말줄임(`...`) 처리한다.
 
+### Structured output 규칙 (remove/prune/cleanup)
+
+- `action`은 텍스트 출력의 첫 토큰과 같은 어휘를 JSON에도 그대로 사용한다.
+  - preview: `would-prune`, `would-remove`, `skip`
+  - apply 결과: `pruned`, `removed`, `kept`
+- `applied`는 실제 apply 경로를 실행했는지 여부다.
+  - preview-only 결과는 항상 `false`
+  - apply 실행 후 확정된 결과는 `true`
+- `removed`는 해당 엔트리가 실제로 제거되었는지 여부다.
+  - preview-only 결과는 항상 `false`
+  - apply 실행 시 `action=pruned|removed`면 `true`, `action=kept|skip`면 `false`
+- `reason`은 명령이 판단 근거를 계산하는 경우에만 포함한다(`cleanup`, `prune`).
+- `wt run --json`의 `exitCode`는 `wt` 자체가 아니라 하위 프로세스 exit code를 의미한다.
+
 ## `wt list`
 
 현재 repo의 registered worktree를 나열한다.
@@ -131,6 +145,7 @@ query와 매칭되는 registered worktree path를 출력한다.
 - query 매칭과 ambiguous 처리, exit code는 `wt path`와 같다.
 - 기본 모드는 하위 프로세스의 `stdout`/`stderr`와 exit code를 그대로 전달한다.
 - `--json` 사용 시 하위 프로세스 출력은 중계하지 않고 `{path, command, exitCode}`만 `stdout`에 쓴다.
+- 하위 프로세스가 non-zero면 `wt`도 같은 exit code로 종료하고, JSON `exitCode`에도 같은 값을 쓴다.
 
 옵션:
 
@@ -182,7 +197,7 @@ branch용 worktree를 만든다.
 
 - `--dry-run`
 - `--force`
-- `--json`: `{path, branch, action, removed}`
+- `--json`: `{path, branch, action, applied, removed}`
 - `--tui`: query 생략 또는 다중 후보 시 TUI 선택
 
 TUI 규칙:
@@ -211,7 +226,7 @@ stale/prunable registered entry를 미리 보거나 정리한다.
 옵션:
 
 - `--apply`
-- `--json`: `{path, branch, pruneReason, action, removed}` 배열
+- `--json`: `{path, branch, pruneReason, reason, action, applied, removed}` 배열
 - `--tui`: prunable entry preview를 TUI로 표시
 
 TUI 규칙:
@@ -242,7 +257,7 @@ TUI 규칙:
 옵션:
 
 - `--apply`
-- `--json`
+- `--json`: `{path, branch, recommendedAction, action, applied, removed, reason, safeToRemove, ...verifyFields}` 배열
 - `--tui`: 추천된 prune/remove 후보를 TUI에서 선택해 preview/apply 대상으로 좁힌다.
 
 TUI 규칙:

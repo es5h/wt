@@ -755,8 +755,11 @@ branch refs/heads/feature-x
 	if err := json.Unmarshal(stdout.Bytes(), &got); err != nil {
 		t.Fatalf("json.Unmarshal() error = %v", err)
 	}
-	if got["action"] != "preview" {
-		t.Fatalf("action = %#v, want preview", got["action"])
+	if got["action"] != "would-remove" {
+		t.Fatalf("action = %#v, want would-remove", got["action"])
+	}
+	if got["applied"] != false {
+		t.Fatalf("applied = %#v, want false", got["applied"])
 	}
 	if got["removed"] != false {
 		t.Fatalf("removed = %#v, want false", got["removed"])

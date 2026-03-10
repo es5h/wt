@@ -21,7 +21,9 @@ type pruneCandidate struct {
 	Path        string `json:"path"`
 	Branch      string `json:"branch,omitempty"`
 	PruneReason string `json:"pruneReason,omitempty"`
+	Reason      string `json:"reason,omitempty"`
 	Action      string `json:"action"`
+	Applied     bool   `json:"applied"`
 	Removed     bool   `json:"removed"`
 }
 
@@ -67,11 +69,11 @@ func newPruneCmd() *cobra.Command {
 				}
 			}
 			if !apply {
-				return writePruneOutput(cmd, candidates, false, jsonOut)
+				return writePruneOutput(cmd, candidates, jsonOut)
 			}
 
 			if len(candidates) == 0 {
-				return writePruneOutput(cmd, candidates, true, jsonOut)
+				return writePruneOutput(cmd, candidates, jsonOut)
 			}
 			if tui {
 				confirm := confirmPrune
@@ -97,7 +99,7 @@ func newPruneCmd() *cobra.Command {
 			}
 
 			removed := removedPruneCandidates(candidates, after)
-			return writePruneOutput(cmd, removed, true, jsonOut)
+			return writePruneOutput(cmd, removed, jsonOut)
 		},
 	}
 
@@ -117,7 +119,9 @@ func collectPrunableCandidates(wts []worktree.Worktree) []pruneCandidate {
 			Path:        wt.Path,
 			Branch:      strings.TrimPrefix(wt.Branch, "refs/heads/"),
 			PruneReason: wt.PruneReason,
-			Action:      "preview",
+			Reason:      wt.PruneReason,
+			Action:      actionWouldPrune,
+			Applied:     false,
 			Removed:     false,
 		})
 	}
@@ -132,15 +136,20 @@ func removedPruneCandidates(before []pruneCandidate, after []worktree.Worktree) 
 
 	out := make([]pruneCandidate, 0, len(before))
 	for _, item := range before {
-		item.Action = "prune"
+		item.Applied = true
 		_, ok := remaining[item.Path]
 		item.Removed = !ok
+		if item.Removed {
+			item.Action = actionPruned
+		} else {
+			item.Action = actionKept
+		}
 		out = append(out, item)
 	}
 	return out
 }
 
-func writePruneOutput(cmd *cobra.Command, items []pruneCandidate, applied bool, jsonOut bool) error {
+func writePruneOutput(cmd *cobra.Command, items []pruneCandidate, jsonOut bool) error {
 	if jsonOut {
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")
@@ -148,16 +157,7 @@ func writePruneOutput(cmd *cobra.Command, items []pruneCandidate, applied bool, 
 	}
 
 	for _, item := range items {
-		action := "would-prune"
-		if applied {
-			if item.Removed {
-				action = "pruned"
-			} else {
-				action = "kept"
-			}
-		}
-
-		line := fmt.Sprintf("%s  %s", action, item.Path)
+		line := fmt.Sprintf("%s  %s", item.Action, item.Path)
 		if item.Branch != "" {
 			line += fmt.Sprintf("  (%s)", item.Branch)
 		}
