@@ -9,9 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"wt/internal/buildinfo"
-	"wt/internal/runner"
-	"wt/internal/worktree"
+	"github.com/es5h/wt/internal/buildinfo"
+	"github.com/es5h/wt/internal/runner"
+	"github.com/es5h/wt/internal/worktree"
 )
 
 func main() {
@@ -44,7 +44,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:           "wt",
 		Short:         "git worktree helper (WIP)",
-		Version:       buildinfo.Version,
+		Version:       buildinfo.EffectiveVersion(),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -62,6 +62,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.AddCommand(newCleanupCmd())
 	rootCmd.AddCommand(newPruneCmd())
 	rootCmd.AddCommand(newRemoveCmd())
+	rootCmd.AddCommand(newUpgradeCmd())
 	return rootCmd
 }
 
@@ -75,6 +76,7 @@ type deps struct {
 	PickWorktree  func(cmd *cobra.Command, wts []worktree.Worktree, initialFilter string) (worktree.Worktree, error)
 	PreviewPrune  func(cmd *cobra.Command, items []pruneCandidate, apply bool) error
 	ConfirmPrune  func(in io.Reader, out io.Writer, count int) (bool, error)
+	InstallWithGo func(ctx context.Context, workDir string, installDir string, packageRef string) (runner.Result, error)
 }
 
 func ensureDeps(cmd *cobra.Command) error {
@@ -99,6 +101,7 @@ func ensureDeps(cmd *cobra.Command) error {
 		PickWorktree:  pickWorktreeWithTUI,
 		PreviewPrune:  previewPruneWithTUI,
 		ConfirmPrune:  confirmPrune,
+		InstallWithGo: installWithGo,
 	}
 
 	cmd.SetContext(context.WithValue(ctx, depsKey{}, d))

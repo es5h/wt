@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"wt/internal/runner"
+	"github.com/es5h/wt/internal/runner"
 )
 
 func TestCleanup_PreviewMixed(t *testing.T) {

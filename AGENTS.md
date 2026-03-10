@@ -61,12 +61,19 @@
 ## Versioning
 - 버전은 `VERSION`에서 관리한다(semver: `MAJOR.MINOR.PATCH`).
 - 사용자에게 보이는 변경이 있으면 `docs/release/notes.md`의 `Unreleased`에 먼저 기록한다.
+- 릴리즈 Git tag는 반드시 `v$(cat VERSION)` 형식을 사용한다.
+- 릴리즈 설치 기준 경로는 `go install github.com/es5h/wt/cmd/wt@latest`로 유지한다.
 
 ## Merge gate (to main)
 - main에 머지(또는 PR ready) 전에 `make premerge`를 통과시킨다.
 - 사용자에게 보이는 변경(명령/옵션/출력/기본값)이 포함되면:
   - 같은 PR에서 `VERSION`을 반드시 bump 한다(기본은 `PATCH`, 필요 시 `MINOR`/`MAJOR`).
   - `docs/release/notes.md`의 `Unreleased`에 변경사항을 추가한다.
+
+## Release automation
+- 태그 릴리즈는 `v*` push로 동작한다.
+- CI는 tag의 semver 형식(`vX.Y.Z...`)과 `VERSION` 일치 여부를 검증한다.
+- 자동화 에이전트는 릴리즈 PR/문서에서 tag 예시를 작성할 때 항상 위 규칙을 사용한다.
 
 ## PR guidelines
 - PR 작성 가이드: `docs/pr-guidelines.md`

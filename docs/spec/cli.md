@@ -240,6 +240,28 @@ TUI 규칙:
 - 각 line은 `action  path  (branch)  [reason]` 형식이다.
 - remove 이유는 `merged:<base>` 또는 `merged-hosting:<provider>[#number]`처럼 짧게 출력한다.
 
+## `wt upgrade`
+
+릴리즈된 `wt` 최신 버전(또는 지정 버전)을 설치한다.
+
+규칙:
+
+- 기본 동작은 현재 실행 중인 `wt` 바이너리 디렉터리를 `GOBIN`으로 사용한다.
+- 기본 설치 대상은 `github.com/es5h/wt/cmd/wt@latest`다.
+- `--version <vX.Y.Z|latest>`로 설치 버전을 고를 수 있다.
+- `--version` 값에는 `@`를 포함할 수 없다.
+- 설치 명령은 `go install`을 사용한다.
+
+옵션:
+
+- `--version <vX.Y.Z|latest>`
+- `--dry-run`: 실행 없이 install command preview만 `stderr`에 출력
+
+출력 규칙:
+
+- 성공 시 `stdout`에 `upgraded: <package@version>`, `install-dir: <path>`를 출력한다.
+- 실패 시 에러는 `stderr`로 전달되고 명령은 실패한다.
+
 ## `wt init <shell>`
 
 셸 helper 함수를 `stdout`으로 출력한다.

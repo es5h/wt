@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	tuipicker "wt/internal/tui/picker"
-	"wt/internal/worktree"
+	tuipicker "github.com/es5h/wt/internal/tui/picker"
+	"github.com/es5h/wt/internal/worktree"
 )
 
 func selectWorktreeWithTUI(cmd *cobra.Command, d *deps, commandName string, wts []worktree.Worktree, initialFilter string) (worktree.Worktree, error) {

@@ -10,9 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"wt/internal/runner"
-	"wt/internal/tui/picker"
-	"wt/internal/worktree"
+	"github.com/es5h/wt/internal/runner"
+	"github.com/es5h/wt/internal/tui/picker"
+	"github.com/es5h/wt/internal/worktree"
 )
 
 func TestRemove_DryRun(t *testing.T) {

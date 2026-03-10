@@ -12,9 +12,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"wt/internal/git"
-	tuipicker "wt/internal/tui/picker"
-	"wt/internal/worktree"
+	"github.com/es5h/wt/internal/git"
+	tuipicker "github.com/es5h/wt/internal/tui/picker"
+	"github.com/es5h/wt/internal/worktree"
 )
 
 type pruneCandidate struct {

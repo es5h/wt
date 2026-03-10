@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"wt/internal/git"
+	"github.com/es5h/wt/internal/git"
 )
 
 func resolveCreateTargetPath(ctx context.Context, d *deps, repoRoot string, primaryRoot string, branch string, opts createOpts) (string, error) {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"wt/internal/git"
+	"github.com/es5h/wt/internal/git"
 )
 
 func newRepoRootCmd() *cobra.Command {
