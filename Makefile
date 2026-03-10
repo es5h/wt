@@ -14,7 +14,7 @@ GH_BIN := $(GOPATH)/bin/gh
 endif
 
 VERSION ?= $(strip $(shell cat VERSION 2>/dev/null))
-LDFLAGS := -ldflags "-X wt/internal/buildinfo.Version=$(VERSION)"
+LDFLAGS := -ldflags "-X github.com/es5h/wt/internal/buildinfo.Version=$(VERSION)"
 
 .PHONY: help
 help: ## Show help

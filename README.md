@@ -7,13 +7,13 @@
 설치:
 
 ```sh
-./scripts/install.sh
+go install github.com/es5h/wt/cmd/wt@latest
 ```
 
 또는:
 
 ```sh
-go install ./cmd/wt
+./scripts/install.sh
 ```
 
 셸 helper 추가:
@@ -28,6 +28,7 @@ eval "$(wt init zsh)"
 wt list
 wt path <query>
 wt create <branch>
+wt upgrade
 wt remove <query> --dry-run
 wt prune
 ```
@@ -37,6 +38,7 @@ wt prune
 - 현재 repo의 registered worktree를 조회한다: `wt list`, `wt list --verify`, `wt list --verify-hosting`
 - worktree 경로를 안전하게 선택한다: `wt path`, `wt path --tui`, `wt root`, `wt run`
 - 없으면 생성하거나 기존 브랜치에 attach 한다: `wt create`, `wt path --create`
+- 릴리즈 태그 기준 최신 버전으로 업그레이드한다: `wt upgrade`
 - stale entry와 안전한 제거 대상을 분리해서 정리한다: `wt prune`, `wt remove`, `wt cleanup`
 - 셸 이동 helper와 completion 연동을 제공한다: `wt init <shell>`, `wt completion <shell>`
 
@@ -62,6 +64,8 @@ make build
 make test
 make premerge
 ```
+
+릴리즈 설치는 `go install github.com/es5h/wt/cmd/wt@latest`를 사용한다.
 
 ## License
 

@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
 
 permissions:
   contents: read
@@ -45,3 +47,30 @@ jobs:
 
       - name: Pre-merge gate
         run: make premerge
+
+  tag_semver:
+    name: tag-semver
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify tag format and VERSION match
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="$(tr -d ' \t\r\n' < VERSION)"
+
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([\-][0-9A-Za-z.-]+)?([+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "ci: tag must be semver with 'v' prefix (e.g. v1.2.3): $TAG" >&2
+            exit 1
+          fi
+
+          if [[ "$TAG" != "v$VERSION" ]]; then
+            echo "ci: tag/version mismatch: tag=$TAG VERSION=$VERSION" >&2
+            exit 1
+          fi
+
+          echo "tag/version verified: $TAG"

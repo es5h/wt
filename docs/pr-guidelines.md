@@ -18,6 +18,13 @@
   - 기본값은 `PATCH` bump이고, 호환성/기능 변화 규모에 따라 `MINOR`/`MAJOR`를 선택한다.
 - 문서 정합성 PR이라도, 어떤 실제 구현 상태를 기준으로 문서를 맞췄는지 PR 본문에서 분명히 적는다.
 
+## Tag release policy
+
+- 릴리즈 태그는 `v<semver>` 형식을 사용한다. 예: `v0.10.2`
+- 태그는 항상 `VERSION` 파일 값과 일치해야 한다. (`tag == v$(cat VERSION)`)
+- 릴리즈/업그레이드 관련 PR은 설치 기준 경로를 `go install github.com/es5h/wt/cmd/wt@latest`로 명시한다.
+- 태그 push 시 `ci`/`release` 워크플로 검증이 통과해야 릴리즈가 완료된 것으로 본다.
+
 ## Recommended PR Body Sections
 
 ### Summary

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"wt/internal/runner"
+	"github.com/es5h/wt/internal/runner"
 )
 
 func TestRoot_PathOnly(t *testing.T) {

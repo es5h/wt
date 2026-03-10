@@ -5,6 +5,8 @@ cd "$(dirname "$0")/.."
 
 version_file="./VERSION"
 release_notes="./docs/release/notes.md"
+gomod_file="./go.mod"
+expected_module="github.com/es5h/wt"
 
 if [ ! -f "$version_file" ]; then
   echo "premerge: missing VERSION file" >&2
@@ -32,5 +34,14 @@ if ! grep -Eq '^## Unreleased[[:space:]]*$' "$release_notes"; then
   exit 1
 fi
 
-exit 0
+if [ ! -f "$gomod_file" ]; then
+  echo "premerge: missing go.mod file" >&2
+  exit 1
+fi
 
+if ! grep -Eq "^module[[:space:]]+$expected_module\$" "$gomod_file"; then
+  echo "premerge: go.mod module path must be '$expected_module'" >&2
+  exit 1
+fi
+
+exit 0

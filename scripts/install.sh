@@ -25,6 +25,7 @@ fi
 
 echo "Installing wt v$VERSION (development) ..."
 echo "Note: shell completion/TUI integrations are NOT installed automatically."
+echo "Note: release install path is 'go install github.com/es5h/wt/cmd/wt@latest'."
 
 INSTALL_DIR=""
 if command -v wt >/dev/null 2>&1; then
@@ -78,7 +79,7 @@ if [ -e "$TARGET" ]; then
     exit 1
   fi
 fi
-GOBIN="$INSTALL_DIR" go install -ldflags "-X wt/internal/buildinfo.Version=$VERSION" ./cmd/wt
+GOBIN="$INSTALL_DIR" go install -ldflags "-X github.com/es5h/wt/internal/buildinfo.Version=$VERSION" ./cmd/wt
 
 echo "Done."
 if [ -x "$INSTALL_DIR/wt" ]; then

@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"wt/internal/runner"
+	"github.com/es5h/wt/internal/runner"
 )
 
 type fakeCall struct {

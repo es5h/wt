@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"wt/internal/git"
-	"wt/internal/worktree"
+	"github.com/es5h/wt/internal/git"
+	"github.com/es5h/wt/internal/worktree"
 )
 
 func newPathCmd() *cobra.Command {

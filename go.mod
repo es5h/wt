@@ -1,4 +1,4 @@
-module wt
+module github.com/es5h/wt
 
 go 1.26
 

@@ -12,7 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"wt/internal/runner"
+	"github.com/es5h/wt/internal/runner"
 )
 
 func decodeJSONObjects(t *testing.T, data []byte) []map[string]any {

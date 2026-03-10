@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"wt/internal/runner"
+	"github.com/es5h/wt/internal/runner"
 )
 
 func writeExecutableStub(path string) error {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"wt/internal/runner"
+	"github.com/es5h/wt/internal/runner"
 )
 
 func WorktreeAddExistingBranch(ctx context.Context, r runner.Runner, repoRoot string, path string, branch string) error {
