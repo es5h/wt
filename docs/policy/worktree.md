@@ -76,6 +76,25 @@
 - `recommendedAction=remove`는 `safeToRemove=true`인 항목에만 적용한다.
 - current, primary, detached, locked, missing-path, missing-git, prunable 예외는 cleanup에서도 그대로 유지한다.
 
+## Structured Output Consistency Policy (권장)
+
+- 목적:
+  - 자동화 소비자가 명령별 분기 없이 `action`/`reason`/`removed`/exit code를 해석할 수 있게 한다.
+  - 텍스트 출력과 JSON structured output의 의미 드리프트를 줄인다.
+- 적용 범위:
+  - `wt list`, `wt run`, `wt remove`, `wt prune`, `wt cleanup`
+  - 특히 상태 전이(미리보기/적용)와 실패 표현이 있는 명령(`run/remove/prune/cleanup`)
+- 권장 통일 규칙:
+  - `action`은 텍스트 출력 첫 토큰과 JSON 값을 동일 어휘로 유지한다.
+  - preview/apply 상태는 `applied`로 표현하고, 실제 엔트리 제거 여부는 `removed`로 분리한다.
+  - `reason`은 “판단 근거가 계산된 경우에만” 채운다. 근거가 없으면 필드 생략 또는 빈 값으로 유지한다.
+  - `wt run --json`의 `exitCode`는 항상 하위 프로세스 의미를 따른다.
+  - usage error는 exit code `2`, 사용자 취소는 `130`, 실행 대상 없음/모호성 같은 선택 실패는 `1`을 기본값으로 유지한다.
+- 변경/이탈 절차:
+  - 통일 규칙을 의도적으로 벗어나는 변경은 허용하되, 같은 PR에서 `docs/spec/cli.md`와 본 정책 문서를 함께 갱신한다.
+  - 이탈 사유(호환성, 안전성, 구현 제약)와 마이그레이션 가이드를 PR 본문 `Behavior`에 명시한다.
+  - 사용자-facing 변화라면 `docs/release/notes.md`와 `VERSION` 정책을 따른다.
+
 ## Root Policy
 
 - `wt root`는 현재 작업 디렉터리가 linked worktree여도 primary repo root를 돌려준다.
