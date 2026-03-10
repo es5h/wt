@@ -102,6 +102,39 @@ confirm semantics:
 - preview 취소는 `wt prune: preview cancelled`
 - exit code `130`
 
+## `wt cleanup --tui`
+
+역할:
+
+- `wt list` 추천 신호(`recommendedAction=prune|remove`) 후보를 검토/선택한 뒤 preview/apply
+
+진입:
+
+- `wt cleanup --tui`
+- `wt cleanup --tui --apply`
+
+동작:
+
+- 후보는 `recommendedAction=prune` 또는 `recommendedAction=remove && safeToRemove=true` 항목만 포함한다.
+- 화면에는 `Continue` row(현재 선택 개수)와 후보 row를 함께 표시한다.
+- 후보 row에서 `Enter`를 누르면 선택/해제가 토글된다.
+- `Continue` row를 선택하면 흐름이 종료된다.
+- `wt cleanup --tui`는 선택된 후보만 text preview(`would-prune`/`would-remove`)를 출력한다.
+- `wt cleanup --tui --apply`는 선택된 후보만 confirm 후 실행한다.
+- `--json`과 함께 쓸 수 없다.
+
+confirm semantics:
+
+- 프롬프트는 `stderr`에 출력된다.
+- 메시지는 `Apply cleanup to N selected candidate(s)? [y/N]` 형식이다.
+- `y`, `yes`만 승인한다.
+- 거부하면 `wt cleanup: aborted`로 종료한다.
+
+취소:
+
+- review 취소는 `wt cleanup: review cancelled`
+- exit code `130`
+
 ## Non-TTY Policy
 
 아래 조합은 모두 usage error로 거부한다.
@@ -109,5 +142,6 @@ confirm semantics:
 - `wt path --tui`
 - `wt remove --tui`
 - `wt prune --tui`
+- `wt cleanup --tui`
 
 이때 메시지는 각 명령 이름을 포함한 `--tui requires a TTY on stdin and stderr` 형식을 사용한다.

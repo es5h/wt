@@ -4,12 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
+
 	"github.com/es5h/wt/internal/runner"
+	"github.com/es5h/wt/internal/tui/picker"
+	"github.com/es5h/wt/internal/worktree"
 )
 
 func TestCleanup_PreviewMixed(t *testing.T) {
@@ -640,6 +645,530 @@ branch refs/heads/current
 	}
 	if !strings.Contains(out, "skip  /repo/.wt/current  (current)  [current]") {
 		t.Fatalf("stdout = %q, want current skip", out)
+	}
+}
+
+func TestCleanupTUI_RequiresTTY(t *testing.T) {
+	t.Parallel()
+
+	root := newRootCmd()
+	root.SetArgs([]string{"cleanup", "--tui"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		CanUseTUI: func() bool { return false },
+	}))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var exitErr *exitError
+	if !errors.As(err, &exitErr) || exitErr.Code != 2 {
+		t.Fatalf("err = %#v, want exitError code 2", err)
+	}
+	if err.Error() != "wt cleanup: --tui requires a TTY on stdin and stderr" {
+		t.Fatalf("err = %q, want TTY guidance", err.Error())
+	}
+}
+
+func TestCleanupTUI_RejectsJSON(t *testing.T) {
+	t.Parallel()
+
+	root := newRootCmd()
+	root.SetArgs([]string{"cleanup", "--tui", "--json"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{}))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var exitErr *exitError
+	if !errors.As(err, &exitErr) || exitErr.Code != 2 {
+		t.Fatalf("err = %#v, want exitError code 2", err)
+	}
+	if err.Error() != "wt cleanup: --tui cannot be combined with --json" {
+		t.Fatalf("err = %q, want json/tui guidance", err.Error())
+	}
+}
+
+func TestCleanupTUI_PreviewSelection(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+
+	removePath := filepath.Join(t.TempDir(), "feature-remove")
+	if err := os.MkdirAll(filepath.Join(removePath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create remove worktree: %v", err)
+	}
+
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree /repo/.wt/prunable
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/prunable
+prunable gitdir file points to non-existent location
+
+worktree `+removePath+`
+HEAD 1111111111111111111111111111111111111111
+branch refs/heads/feature-remove
+`) + "\n"
+
+	root := newRootCmd()
+	var stdout, stderr bytes.Buffer
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs([]string{"cleanup", "--tui"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"},
+					res:     runner.Result{Stdout: []byte("refs/remotes/origin/main\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "origin/main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{ExitCode: 2},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/main", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/prunable", "origin/main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     assertErr("exit 1"),
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-remove", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+			},
+		},
+		Cwd:       cwd,
+		CanUseTUI: func() bool { return true },
+		ReviewCleanup: func(_ *cobra.Command, candidates []cleanupCandidate, apply bool) ([]cleanupCandidate, error) {
+			if apply {
+				t.Fatal("apply = true, want false")
+			}
+			if len(candidates) != 2 {
+				t.Fatalf("len(candidates) = %d, want 2", len(candidates))
+			}
+			if candidates[0].Signals.RecommendedAction != "prune" || candidates[1].Signals.RecommendedAction != "remove" {
+				t.Fatalf("unexpected candidates: %#v", candidates)
+			}
+			return candidates[1:], nil
+		},
+	}))
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "would-remove  "+removePath+"  (feature-remove)") {
+		t.Fatalf("stdout = %q, want selected remove preview", out)
+	}
+	if strings.Contains(out, "would-prune") {
+		t.Fatalf("stdout = %q, want prune excluded by selection", out)
+	}
+	if strings.Contains(out, "skip  /repo  (main)") {
+		t.Fatalf("stdout = %q, want non-selected entries excluded", out)
+	}
+}
+
+func TestCleanupTUI_ApplyConfirm(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+	removePath := filepath.Join(t.TempDir(), "feature-x")
+	if err := os.MkdirAll(filepath.Join(removePath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create remove worktree: %v", err)
+	}
+	before := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree /repo/.wt/prunable
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/prunable
+prunable gitdir file points to non-existent location
+
+worktree `+removePath+`
+HEAD 1111111111111111111111111111111111111111
+branch refs/heads/feature-x
+`) + "\n"
+	after := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree `+removePath+`
+HEAD 1111111111111111111111111111111111111111
+branch refs/heads/feature-x
+`) + "\n"
+
+	root := newRootCmd()
+	var stdout, stderr bytes.Buffer
+	root.SetIn(strings.NewReader("yes\n"))
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs([]string{"cleanup", "--tui", "--apply"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(before), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"},
+					res:     runner.Result{Stdout: []byte("refs/remotes/origin/main\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "origin/main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{ExitCode: 2},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/main", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/prunable", "origin/main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     assertErr("exit 1"),
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-x", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "prune", "--expire", "now"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(after), ExitCode: 0},
+				},
+			},
+		},
+		Cwd:       cwd,
+		CanUseTUI: func() bool { return true },
+		ReviewCleanup: func(_ *cobra.Command, candidates []cleanupCandidate, apply bool) ([]cleanupCandidate, error) {
+			if !apply {
+				t.Fatal("apply = false, want true")
+			}
+			if len(candidates) != 2 {
+				t.Fatalf("len(candidates) = %d, want 2", len(candidates))
+			}
+			return candidates[:1], nil
+		},
+	}))
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if !strings.Contains(stderr.String(), "Apply cleanup to 1 selected candidate? [y/N]") {
+		t.Fatalf("stderr = %q, want confirmation prompt", stderr.String())
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "pruned  /repo/.wt/prunable  (prunable)") {
+		t.Fatalf("stdout = %q, want selected prune applied", out)
+	}
+	if strings.Contains(out, "feature-x") {
+		t.Fatalf("stdout = %q, want unselected candidate excluded", out)
+	}
+}
+
+func TestCleanupTUI_ConfirmCancelAborts(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree /repo/.wt/prunable
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/prunable
+prunable gitdir file points to non-existent location
+`) + "\n"
+
+	root := newRootCmd()
+	root.SetIn(strings.NewReader("n\n"))
+	root.SetArgs([]string{"cleanup", "--tui", "--apply"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"},
+					res:     runner.Result{Stdout: []byte("refs/remotes/origin/main\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "origin/main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{ExitCode: 2},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/main", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/prunable", "origin/main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     assertErr("exit 1"),
+				},
+			},
+		},
+		Cwd:       cwd,
+		CanUseTUI: func() bool { return true },
+		ReviewCleanup: func(_ *cobra.Command, candidates []cleanupCandidate, _ bool) ([]cleanupCandidate, error) {
+			return candidates, nil
+		},
+	}))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var exitErr *exitError
+	if !errors.As(err, &exitErr) || exitErr.Code != 1 {
+		t.Fatalf("err = %#v, want exitError code 1", err)
+	}
+	if err.Error() != "wt cleanup: aborted" {
+		t.Fatalf("err = %q, want aborted", err.Error())
+	}
+}
+
+func TestCleanupTUI_ReviewCancelReturnsExit130(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+	porcelain := strings.TrimSpace(`
+worktree /repo/.wt/prunable
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/prunable
+prunable gitdir file points to non-existent location
+`) + "\n"
+
+	root := newRootCmd()
+	root.SetArgs([]string{"cleanup", "--tui"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"},
+					res:     runner.Result{Stdout: []byte("refs/remotes/origin/main\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "origin/main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{ExitCode: 2},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/prunable", "origin/main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     assertErr("exit 1"),
+				},
+			},
+		},
+		Cwd:       cwd,
+		CanUseTUI: func() bool { return true },
+		ReviewCleanup: func(_ *cobra.Command, _ []cleanupCandidate, _ bool) ([]cleanupCandidate, error) {
+			return nil, picker.ErrCancelled
+		},
+	}))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var exitErr *exitError
+	if !errors.As(err, &exitErr) || exitErr.Code != 130 {
+		t.Fatalf("err = %#v, want exitError code 130", err)
+	}
+	if err.Error() != "wt cleanup: review cancelled" {
+		t.Fatalf("err = %q, want review cancelled", err.Error())
+	}
+}
+
+func TestBuildCleanupReviewPickerItems(t *testing.T) {
+	t.Parallel()
+
+	candidates := []cleanupCandidate{
+		{
+			Worktree: worktree.Worktree{
+				Path:   "/repo/.wt/feature-x",
+				Branch: "refs/heads/feature-x",
+			},
+			Signals: listSignals{RecommendedAction: "remove"},
+			Reason:  "merged:main",
+		},
+	}
+	selected := map[string]struct{}{
+		"/repo/.wt/feature-x": {},
+	}
+
+	items := buildCleanupReviewPickerItems(candidates, selected, true)
+	if len(items) != 2 {
+		t.Fatalf("len(items) = %d, want 2", len(items))
+	}
+	if items[0].ID != cleanupReviewDoneID {
+		t.Fatalf("items[0].ID = %q, want done item", items[0].ID)
+	}
+	if !strings.Contains(items[0].Meta, "selected 1/1") {
+		t.Fatalf("items[0].Meta = %q, want selection summary", items[0].Meta)
+	}
+	if items[1].Label != "[x] feature-x" {
+		t.Fatalf("items[1].Label = %q, want selected label", items[1].Label)
+	}
+	if !strings.Contains(items[1].Meta, "action:remove") || !strings.Contains(items[1].Meta, "merged:main") {
+		t.Fatalf("items[1].Meta = %q, want action/reason metadata", items[1].Meta)
 	}
 }
 
