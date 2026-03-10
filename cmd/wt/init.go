@@ -19,9 +19,17 @@ func newInitCmd() *cobra.Command {
 			shell := strings.ToLower(strings.TrimSpace(args[0]))
 			switch shell {
 			case "zsh":
-				// Output-only: user must opt-in by pasting into their rc file.
+				// Output-only: user must opt-in by evaluating or pasting this snippet.
 				// Includes an optional completion bridge so `wtg <TAB>` and `wcd <TAB>` complete like `wt path <TAB>`.
-				fmt.Fprintln(cmd.OutOrStdout(), "# wt shell integration (paste into your ~/.zshrc)")
+				fmt.Fprintln(cmd.OutOrStdout(), "# wt shell integration for zsh (output-only; no rc changes are made)")
+				fmt.Fprintln(cmd.OutOrStdout(), `# Apply now: eval "$(wt init zsh)"`)
+				fmt.Fprintln(cmd.OutOrStdout(), `# Persist helpers: wt init zsh >> ~/.zshrc`)
+				fmt.Fprintln(cmd.OutOrStdout(), "# Optional completion install:")
+				fmt.Fprintln(cmd.OutOrStdout(), "#   mkdir -p ~/.zsh/completions")
+				fmt.Fprintln(cmd.OutOrStdout(), "#   wt completion zsh > ~/.zsh/completions/_wt")
+				fmt.Fprintln(cmd.OutOrStdout(), "#   fpath=(~/.zsh/completions $fpath)")
+				fmt.Fprintln(cmd.OutOrStdout(), "#   autoload -Uz compinit && compinit")
+				fmt.Fprintln(cmd.OutOrStdout(), "")
 				fmt.Fprintln(cmd.OutOrStdout(), `wtr() { cd "$(wt root)" || return; }`)
 				fmt.Fprintln(cmd.OutOrStdout(), `wtg() { cd "$(wt path "$@")" || return; }`)
 				fmt.Fprintln(cmd.OutOrStdout(), `wcd() { cd "$(wt path "$@")" || return; }`)
@@ -44,13 +52,26 @@ func newInitCmd() *cobra.Command {
 				fmt.Fprintln(cmd.OutOrStdout(), `fi`)
 				return nil
 			case "bash":
-				fmt.Fprintln(cmd.OutOrStdout(), "# wt shell integration (paste into your ~/.bashrc)")
+				fmt.Fprintln(cmd.OutOrStdout(), "# wt shell integration for bash (output-only; no rc changes are made)")
+				fmt.Fprintln(cmd.OutOrStdout(), `# Apply now: eval "$(wt init bash)"`)
+				fmt.Fprintln(cmd.OutOrStdout(), `# Persist helpers: wt init bash >> ~/.bashrc`)
+				fmt.Fprintln(cmd.OutOrStdout(), "# Optional completion install:")
+				fmt.Fprintln(cmd.OutOrStdout(), "#   mkdir -p ~/.bash_completion.d")
+				fmt.Fprintln(cmd.OutOrStdout(), "#   wt completion bash > ~/.bash_completion.d/wt")
+				fmt.Fprintln(cmd.OutOrStdout(), "#   source ~/.bash_completion.d/wt")
+				fmt.Fprintln(cmd.OutOrStdout(), "")
 				fmt.Fprintln(cmd.OutOrStdout(), `wtr() { cd "$(wt root)" || return; }`)
 				fmt.Fprintln(cmd.OutOrStdout(), `wtg() { cd "$(wt path "$@")" || return; }`)
 				fmt.Fprintln(cmd.OutOrStdout(), `wcd() { cd "$(wt path "$@")" || return; }`)
 				return nil
 			case "fish":
-				fmt.Fprintln(cmd.OutOrStdout(), "# wt shell integration (paste into config.fish)")
+				fmt.Fprintln(cmd.OutOrStdout(), "# wt shell integration for fish (output-only; no config changes are made)")
+				fmt.Fprintln(cmd.OutOrStdout(), "# Apply now: wt init fish | source")
+				fmt.Fprintln(cmd.OutOrStdout(), "# Persist helpers: wt init fish >> ~/.config/fish/config.fish")
+				fmt.Fprintln(cmd.OutOrStdout(), "# Optional completion install:")
+				fmt.Fprintln(cmd.OutOrStdout(), "#   mkdir -p ~/.config/fish/completions")
+				fmt.Fprintln(cmd.OutOrStdout(), "#   wt completion fish > ~/.config/fish/completions/wt.fish")
+				fmt.Fprintln(cmd.OutOrStdout(), "")
 				fmt.Fprintln(cmd.OutOrStdout(), "function wtr")
 				fmt.Fprintln(cmd.OutOrStdout(), "  cd (wt root); or return")
 				fmt.Fprintln(cmd.OutOrStdout(), "end")
