@@ -24,9 +24,9 @@
 
 - 릴리즈 태그는 `v<semver>` 형식을 사용한다. 예: `v0.10.2`
 - 태그는 항상 `VERSION` 파일 값과 일치해야 한다. (`tag == v$(cat VERSION)`)
-- `main`으로 머지된 커밋에서 `VERSION`이 변경되면 GitHub Actions가 `v$(cat VERSION)` 태그를 자동 생성한다.
+- `main` push마다 GitHub Actions가 현재 `VERSION`의 태그를 확인하고, 태그가 없으면 `v$(cat VERSION)`를 자동 생성한다.
 - 같은 push 범위에서 `VERSION`만 변경되고 `docs/release/notes.md`가 변경되지 않으면 CI가 실패한다.
-- 이미 존재하는 태그와 충돌하면 auto-tag 워크플로는 실패한다(수동 덮어쓰기 금지).
+- `VERSION`이 변경된 push에서 이미 존재하는 태그와 충돌하면 auto-tag 워크플로는 실패한다(수동 덮어쓰기 금지).
 - 릴리즈/업그레이드 관련 PR은 설치 기준 경로를 `go install github.com/es5h/wt/cmd/wt@latest`로 명시한다.
 - 태그 push 시 `ci`/`release` 워크플로 검증이 통과해야 릴리즈가 완료된 것으로 본다.
 
