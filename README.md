@@ -156,6 +156,7 @@ wt upgrade --dry-run
 - `wt prune`/`wt cleanup` preview 후 정리
 
 상세 템플릿과 도구별 차이는 [docs/ux/agents.md](docs/ux/agents.md)를 참고하세요.
+레포에 포함된 복붙용 샘플은 [docs/examples/skills/wt-worktree/SKILL.md](docs/examples/skills/wt-worktree/SKILL.md) 입니다.
 
 ## Documentation
 

@@ -33,6 +33,7 @@ wt cleanup
 ## Shared skill template (`SKILL.md`)
 
 아래 템플릿을 공통으로 사용하면 된다.
+레포에 포함된 샘플 파일: `docs/examples/skills/wt-worktree/SKILL.md`
 
 ```md
 # wt-worktree
