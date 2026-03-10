@@ -15,7 +15,18 @@ import (
 func TestUpgrade_DryRun(t *testing.T) {
 	t.Parallel()
 
-	d := &deps{Cwd: "/repo"}
+	d := &deps{
+		Cwd: "/repo",
+		ResolveLatestVersion: func(_ context.Context, workDir string, modulePath string) (string, error) {
+			if workDir != "/repo" {
+				t.Fatalf("workDir = %q, want /repo", workDir)
+			}
+			if modulePath != "github.com/es5h/wt" {
+				t.Fatalf("modulePath = %q, want github.com/es5h/wt", modulePath)
+			}
+			return "v0.10.2", nil
+		},
+	}
 
 	root := newRootCmd()
 	var stdout, stderr bytes.Buffer
@@ -30,8 +41,8 @@ func TestUpgrade_DryRun(t *testing.T) {
 	if stdout.Len() != 0 {
 		t.Fatalf("stdout = %q, want empty", stdout.String())
 	}
-	if !strings.Contains(stderr.String(), "go install github.com/es5h/wt/cmd/wt@latest") {
-		t.Fatalf("stderr = %q, want latest install command", stderr.String())
+	if !strings.Contains(stderr.String(), "go install github.com/es5h/wt/cmd/wt@v0.10.2") {
+		t.Fatalf("stderr = %q, want resolved version install command", stderr.String())
 	}
 }
 
@@ -101,6 +112,9 @@ func TestUpgrade_InstallerError(t *testing.T) {
 
 	d := &deps{
 		Cwd: "/repo",
+		ResolveLatestVersion: func(_ context.Context, workDir string, modulePath string) (string, error) {
+			return "v0.10.2", nil
+		},
 		InstallWithGo: func(_ context.Context, workDir string, installDir string, packageRef string) (runner.Result, error) {
 			return runner.Result{Stderr: []byte("download failed\n"), ExitCode: 1}, fmt.Errorf("exit status 1")
 		},
@@ -116,5 +130,28 @@ func TestUpgrade_InstallerError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "go install failed: download failed") {
 		t.Fatalf("err = %q, want installer stderr message", err.Error())
+	}
+}
+
+func TestUpgrade_ResolveLatestVersionError(t *testing.T) {
+	t.Parallel()
+
+	d := &deps{
+		Cwd: "/repo",
+		ResolveLatestVersion: func(_ context.Context, workDir string, modulePath string) (string, error) {
+			return "", fmt.Errorf("no released versions found")
+		},
+	}
+
+	root := newRootCmd()
+	root.SetArgs([]string{"upgrade"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, d))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "failed to resolve latest release version") {
+		t.Fatalf("err = %q, want resolver failure message", err.Error())
 	}
 }

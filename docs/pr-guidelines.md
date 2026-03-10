@@ -16,12 +16,17 @@
 - 머지 전 기준은 `make premerge` 통과다.
 - 사용자-facing 변경이 있으면 같은 PR에서 `VERSION`을 반드시 bump 한다.
   - 기본값은 `PATCH` bump이고, 호환성/기능 변화 규모에 따라 `MINOR`/`MAJOR`를 선택한다.
+- `VERSION`을 변경한 PR은 같은 PR에서 `docs/release/notes.md`를 반드시 함께 갱신한다.
+- `VERSION`을 변경한 PR은 이전 버전보다 증가해야 한다(동일/감소 금지).
 - 문서 정합성 PR이라도, 어떤 실제 구현 상태를 기준으로 문서를 맞췄는지 PR 본문에서 분명히 적는다.
 
 ## Tag release policy
 
 - 릴리즈 태그는 `v<semver>` 형식을 사용한다. 예: `v0.10.2`
 - 태그는 항상 `VERSION` 파일 값과 일치해야 한다. (`tag == v$(cat VERSION)`)
+- `main`으로 머지된 커밋에서 `VERSION`이 변경되면 GitHub Actions가 `v$(cat VERSION)` 태그를 자동 생성한다.
+- 같은 push 범위에서 `VERSION`만 변경되고 `docs/release/notes.md`가 변경되지 않으면 CI가 실패한다.
+- 이미 존재하는 태그와 충돌하면 auto-tag 워크플로는 실패한다(수동 덮어쓰기 금지).
 - 릴리즈/업그레이드 관련 PR은 설치 기준 경로를 `go install github.com/es5h/wt/cmd/wt@latest`로 명시한다.
 - 태그 push 시 `ci`/`release` 워크플로 검증이 통과해야 릴리즈가 완료된 것으로 본다.
 

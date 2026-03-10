@@ -50,6 +50,17 @@ func newUpgradeCmd() *cobra.Command {
 			if strings.HasPrefix(version, "@") {
 				return usageError(fmt.Errorf("wt upgrade: --version must not include '@': %s", version))
 			}
+			if version == "latest" {
+				resolver := d.ResolveLatestVersion
+				if resolver == nil {
+					resolver = resolveLatestVersion
+				}
+				resolvedVersion, resolveErr := resolver(cmd.Context(), d.Cwd, buildinfo.ModulePath)
+				if resolveErr != nil {
+					return fmt.Errorf("wt upgrade: failed to resolve latest release version: %w", resolveErr)
+				}
+				version = resolvedVersion
+			}
 
 			packageRef := fmt.Sprintf("%s/cmd/wt@%s", buildinfo.ModulePath, version)
 			if opts.DryRun {

@@ -80,9 +80,15 @@
   - `docs/release/notes.md`의 `Unreleased`에 변경사항을 추가한다.
 
 ## Release automation
+- `main` push에서 `VERSION`이 변경되면 GitHub Actions가 `v$(cat VERSION)` 태그를 자동 생성한다.
+- 자동 태깅 가드:
+  - `VERSION` 변경 PR은 같은 변경 범위에서 `docs/release/notes.md`도 반드시 갱신되어야 한다.
+  - `VERSION`은 유효한 semver여야 하고, 이전 값보다 증가해야 한다.
+  - 동일 태그가 이미 존재하면 자동 태깅은 실패한다(중복 릴리즈 방지).
 - 태그 릴리즈는 `v*` push로 동작한다.
-- CI는 tag의 semver 형식(`vX.Y.Z...`)과 `VERSION` 일치 여부를 검증한다.
+- CI/release는 tag의 semver 형식(`vX.Y.Z...`)과 `VERSION` 일치 여부를 검증한다.
 - 자동화 에이전트는 릴리즈 PR/문서에서 tag 예시를 작성할 때 항상 위 규칙을 사용한다.
+- 자동화 에이전트는 릴리즈 정책을 우회하기 위해 수동 tag push를 기본 전략으로 사용하지 않는다(예외 상황은 PR 본문에 사유 명시).
 
 ## PR guidelines
 - PR 작성 가이드: `docs/pr-guidelines.md`
