@@ -136,6 +136,7 @@ wt upgrade --dry-run
 - CLI 스펙: [docs/spec/cli.md](docs/spec/cli.md)
 - 셸 통합: [docs/ux/shell.md](docs/ux/shell.md)
 - TUI 가이드: [docs/ux/tui.md](docs/ux/tui.md)
+- 에이전트 연동 가이드(Claude/Codex): [docs/ux/agents.md](docs/ux/agents.md)
 - 릴리즈 노트: [docs/release/notes.md](docs/release/notes.md)
 - 릴리즈 절차: [docs/release/process.md](docs/release/process.md)
 
