@@ -14,8 +14,10 @@
 ## Release steps
 
 1. main에 반영할 PR에서 `VERSION`을 bump 하고 `docs/release/notes.md`를 업데이트한다.
-2. main 머지 후 `auto-tag` 워크플로가 push 범위에서 `VERSION` 변경을 감지하면 `v$(cat VERSION)` 태그를 자동 생성/푸시한다.
-3. 태그 push 이벤트로 `release` 워크플로가 태그 검증 후 GitHub Release를 자동 생성한다.
+2. main push마다 `auto-tag` 워크플로가 현재 `VERSION`을 읽어 `v$(cat VERSION)` 태그를 확인한다.
+3. 태그가 없으면 자동 생성/푸시하고, 이미 있으면 skip 한다.
+4. `VERSION`이 변경된 push라면 release notes 동반 변경과 태그 중복 정책을 함께 검증한다.
+5. 태그 push 이벤트로 `release` 워크플로가 태그 검증 후 GitHub Release를 자동 생성한다.
 
 수동 태깅(예외 상황에서만):
 
@@ -33,12 +35,13 @@ git push origin "v${VERSION}"
 - `go install github.com/es5h/wt/cmd/wt@latest` 후 `wt --version` 출력이 태그 버전과 일치하는지 확인한다.
 - GitHub Actions `ci`는 PR/main push에서 `VERSION`/`docs/release/notes.md` 정책과 semver 증가를 검증한다.
 - GitHub Actions `ci`는 tag push 시 `v<semver>` 형식과 `VERSION` 파일 일치 여부를 자동 검증한다.
-- GitHub Actions `auto-tag`는 main push에서 `VERSION` 변경 시에만 태그를 생성하고, 태그 중복 시 실패한다.
+- GitHub Actions `auto-tag`는 main push마다 현재 `VERSION` 태그 존재 여부를 확인하고, 태그가 없을 때 생성한다.
+- GitHub Actions `auto-tag`는 `VERSION`이 변경된 push에서 태그 중복이 발견되면 실패한다.
 - GitHub Actions `release`는 같은 검증을 통과한 tag에 대해 Release를 자동 발행한다.
 
 ## Auto-tag failure response
 
-- `auto-tag` 실패 시 먼저 실패 원인을 확인한다: `VERSION`/`docs/release/notes.md` 동반 변경 누락, semver 형식 오류, 버전 증가 규칙 위반, 기존 tag 충돌.
+- `auto-tag` 실패 시 먼저 실패 원인을 확인한다: `VERSION`/`docs/release/notes.md` 동반 변경 누락, semver 형식 오류, 버전 증가 규칙 위반, `VERSION` 변경 push에서의 기존 tag 충돌.
 - 정책 위반이면 fix PR로 `VERSION`과 `docs/release/notes.md`를 함께 수정하고 main에 다시 머지한다(강제 push/태그 덮어쓰기 금지).
 - 기존 tag 충돌이면 이미 릴리즈된 버전으로 판단하고 `VERSION`을 다음 semver로 올린 PR을 만든다.
 - 예외적으로 수동 태깅이 필요하면 PR/이슈에 사유와 실행 로그를 남기고, 태그는 반드시 `v$(cat VERSION)` 규칙을 지킨다.
