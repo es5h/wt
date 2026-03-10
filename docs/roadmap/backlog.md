@@ -4,29 +4,23 @@
 
 ## Prioritized candidates
 
-1. `wt cleanup --tui` 또는 선택형 apply
-- 현재 `wt cleanup`는 추천 액션 계산과 실제 실행 엔진은 있지만, 결과를 사람이 고르는 단계가 없다.
-- 기존 picker/TUI와 `recommendedAction`, `safeToRemove` 신호를 재사용할 수 있어서 구현 비용 대비 효과가 크다.
-- 기본값은 계속 preview-only 로 유지하고, apply 는 명시적 opt-in 이어야 한다.
-
-2. `wt list` 필터 옵션
-- 예: `--stale`, `--safe-to-remove`, `--recommended remove|prune`
-- 현재도 `cmd/wt/list.go`에서 같은 신호를 계산하므로 새 검증 로직 없이 출력 계층 확장으로 접근할 수 있다.
-- 스크립트와 사람이 보는 출력 모두에 직접 이득이 있다.
-
-3. `wt doctor`
+1. `wt doctor`
 - 점검 대상 후보: Git context, primary root 해석, `wt.root`, `WT_ROOT`, `gh`/`glab`, shell completion 설치 여부
 - `--verify-hosting`와 shell integration 쪽 문제를 진단할 때 반복되는 수동 확인을 줄일 수 있다.
 - 기본 출력은 사람이 읽기 좋게 두고, 필요하면 `--json`을 제공하는 방향이 맞다.
 
-4. Shell/completion 설치 helper
-- 자동 rc 수정은 현재 non-goal 과 충돌하므로 피한다.
-- 대신 completion 파일 생성 위치 안내, snippet export, 설치 dry-run 같은 안전한 helper 는 범위 안에 있다.
-- `wt init`과 Cobra completion 을 묶는 좁은 UX 정리가 적절하다.
-
-5. Structured JSON consistency
+2. Structured JSON consistency
 - `action`, `reason`, `removed`, exit code 표현이 명령별로 조금씩 다르다.
 - 스크립트 소비자를 고려하면 명령 간 schema naming 과 preview/apply 상태 표현을 맞추는 후속 작업이 가치가 있다.
+
+3. Agent/shell UX follow-up hardening
+- 최근 머지로 shell/completion 설치 가이드와 에이전트용 prompt template 이 들어갔다.
+- 실제 사용 결과를 보고 문서 길이, example 밀도, helper 범위를 줄이거나 보정하는 후속 정리가 필요할 수 있다.
+- 새 기능 추가보다는 실제 사용 흔적을 기준으로 다듬는 성격이 강하다.
+
+4. `wt cleanup`/`wt list` 후속 polish
+- `cleanup --tui`와 list 필터는 이미 들어갔지만, 실제 사용 후 review/apply copy, filter discoverability, help text 는 더 다듬을 여지가 있다.
+- 기능 확장보다 naming/help/output polish 위주로 접근하는 편이 맞다.
 
 ## Candidate selection criteria
 
