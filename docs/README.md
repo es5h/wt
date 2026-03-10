@@ -10,5 +10,6 @@
 - [docs/release/notes.md](release/notes.md): 사용자-facing 변경 이력
 - [docs/release/process.md](release/process.md): 태그 기반 릴리즈 절차
 - [docs/roadmap/README.md](roadmap/README.md): 이미 완료된 범위와 다음 현실적 개발 순서
+- [docs/roadmap/backlog.md](roadmap/backlog.md): 다음 피처 논의를 위한 우선순위 backlog
 - [docs/pr-guidelines.md](pr-guidelines.md): PR 본문과 E2E 작성 규칙
 - [docs/prompts/feature-pr-template.md](prompts/feature-pr-template.md): 팀 표준 재사용 프롬프트 템플릿
