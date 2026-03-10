@@ -10,6 +10,21 @@
 - 애매한 `TODO:`를 남기지 말고, 범위를 줄이거나 가정을 적는다.
 - PR 본문 품질 기준은 프롬프트 안에서 같이 고정한다.
 
+## Agent contract
+
+프롬프트를 받은 에이전트는 아래를 반드시 지켜야 한다.
+
+- 범위를 벗어난 리팩터링을 하지 않는다.
+- 구현 + 테스트 + 문서 동기화를 한 PR 안에서 완료한다.
+- stdout/stderr/exit code 계약이 바뀌면 PR 본문에 명시한다.
+- 머지 게이트(`make premerge`)를 통과시킨다.
+- 불확실한 내용은 추측으로 문서화하지 않는다.
+- 구현 작업은 기본적으로 `wt` 분리 워크트리에서 진행한다.
+- 사용자-facing 변경 PR에서는 E2E 명령을 실제 실행하고 결과를 PR 본문에 남긴다.
+- 사용자-facing 변경 PR에서는 같은 PR에서 `VERSION`을 반드시 bump 한다.
+- `VERSION`을 변경한 PR에서는 같은 PR에서 `docs/release/notes.md`를 반드시 함께 갱신한다.
+- `VERSION`은 이전 값보다 증가해야 하며(동일/감소 금지), main 머지 후 auto-tag(`v$(cat VERSION)`)와 충돌하면 안 된다.
+
 ## Minimal template
 
 ```md
