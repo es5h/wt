@@ -274,6 +274,23 @@ TUI 규칙:
 - 각 line은 `action  path  (branch)  [reason]` 형식이다.
 - remove 이유는 `merged:<base>` 또는 `merged-hosting:<provider>[#number]`처럼 짧게 출력한다.
 
+## `wt doctor`
+
+현재 실행 환경에서 `wt` 진단 정보를 출력한다.
+
+규칙:
+
+- 진단 실패가 곧 명령 전체 실패가 되지 않도록 설계한다.
+- usage error가 필요한 경우에만 exit code `2`를 사용한다.
+- 기본 출력은 사람이 읽기 쉬운 text 형식이다.
+- 점검 상태는 `ok`, `warn`, `unavailable`로 구분한다.
+- text 출력은 각 줄의 상태 토큰(`[ok]`, `[warn]`, `[unavailable]`)이 JSON `status`와 동일 의미를 갖는다.
+- 기본 점검 대상은 Git context, primary root 해석, `WT_ROOT`, repo-local `wt.root`, hosting CLI(`gh`/`glab`) 준비 상태, shell/completion 상태다.
+
+옵션:
+
+- `--json`: 구조화 JSON 출력
+
 ## `wt upgrade`
 
 릴리즈된 `wt` 최신 버전(또는 지정 버전)을 설치한다.

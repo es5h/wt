@@ -67,6 +67,7 @@ wtg feature/login   # == cd "$(wt path feature/login)"
 | `wt remove [query]` | 안전 규칙 기반 worktree 제거 |
 | `wt prune` | prunable entry 미리보기/정리 |
 | `wt cleanup` | 추천 액션(prune/remove) 일괄 처리 |
+| `wt doctor` | 환경/설치/컨텍스트 진단 |
 | `wt upgrade` | 릴리즈 버전으로 자체 업그레이드 |
 | `wt init <shell>` | 셸 함수 출력 (`wtr`, `wtg`, `wcd`) |
 

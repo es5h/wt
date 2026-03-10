@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 
 	"github.com/spf13/cobra"
 
@@ -62,6 +63,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.AddCommand(newCleanupCmd())
 	rootCmd.AddCommand(newPruneCmd())
 	rootCmd.AddCommand(newRemoveCmd())
+	rootCmd.AddCommand(newDoctorCmd())
 	rootCmd.AddCommand(newUpgradeCmd())
 	return rootCmd
 }
@@ -80,6 +82,10 @@ type deps struct {
 	ConfirmCleanup       func(in io.Reader, out io.Writer, count int) (bool, error)
 	InstallWithGo        func(ctx context.Context, workDir string, installDir string, packageRef string) (runner.Result, error)
 	ResolveLatestVersion func(ctx context.Context, workDir string, modulePath string) (string, error)
+	LookPath             func(file string) (string, error)
+	ReadFile             func(path string) ([]byte, error)
+	FileExists           func(path string) bool
+	Getenv               func(key string) string
 }
 
 func ensureDeps(cmd *cobra.Command) error {
@@ -108,6 +114,13 @@ func ensureDeps(cmd *cobra.Command) error {
 		ConfirmCleanup:       confirmCleanup,
 		InstallWithGo:        installWithGo,
 		ResolveLatestVersion: resolveLatestVersion,
+		LookPath:             exec.LookPath,
+		ReadFile:             os.ReadFile,
+		FileExists: func(path string) bool {
+			info, err := os.Stat(path)
+			return err == nil && !info.IsDir()
+		},
+		Getenv: os.Getenv,
 	}
 
 	cmd.SetContext(context.WithValue(ctx, depsKey{}, d))
