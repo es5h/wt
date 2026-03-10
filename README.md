@@ -1,61 +1,142 @@
 # wt
 
-`wt`는 실제 작업용 `git worktree` helper CLI입니다. 현재 `main`에 반영된 기능 기준으로 `list`, `path`, `create`, `root`, `run`, `remove`, `prune`, `cleanup`, `init`, TUI picker 흐름을 제공합니다.
+`wt`는 `git worktree` 운영을 단순화하는 CLI입니다.
+브랜치별 워크트리 생성/탐색/정리 흐름을 표준화해서, 반복적인 Git 명령과 실수 가능성을 줄이는 것이 목적입니다.
 
-## Quick Start
+## Purpose
 
-설치:
+- 워크트리 경로를 빠르게 찾고(`wt path`) 셸에서 바로 이동 가능한 출력 제공
+- 브랜치별 워크트리를 안전하게 생성/재사용(`wt create`, `wt path --create`)
+- stale/prunable entry와 안전 제거 대상을 분리해 정리(`wt prune`, `wt remove`, `wt cleanup`)
+- 스크립트 친화 출력(`--json`, `--porcelain`)과 사람 친화 기본 출력의 균형 유지
+
+## Installation
+
+권장 설치(릴리즈 태그 기준):
 
 ```sh
 go install github.com/es5h/wt/cmd/wt@latest
 ```
 
-또는:
+로컬 소스에서 설치:
 
 ```sh
 ./scripts/install.sh
 ```
 
-셸 helper 추가:
+버전 확인:
+
+```sh
+wt --version
+```
+
+## Quick Start
+
+```sh
+# 1) 현재 repo의 worktree 상태 확인
+wt list
+
+# 2) query로 worktree 경로 찾기
+wt path feature/login
+
+# 3) 없으면 생성하면서 경로 얻기
+wt path --create feature/login
+
+# 4) 안전하게 정리(미리보기)
+wt prune
+wt remove feature/login --dry-run
+```
+
+셸 helper를 쓰면 `cd` 흐름이 더 간단해집니다.
 
 ```sh
 eval "$(wt init zsh)"
+wtg feature/login   # == cd "$(wt path feature/login)"
 ```
 
-기본 흐름:
+## Core Commands
+
+| Command | 용도 |
+| --- | --- |
+| `wt list` | registered worktree 목록 조회 |
+| `wt path [query]` | query에 맞는 worktree 경로 출력 (path-only) |
+| `wt create <branch>` | 브랜치용 worktree 생성/재사용 |
+| `wt root` | primary repo root 출력 |
+| `wt run <query> -- <cmd...>` | 선택된 worktree에서 명령 실행 |
+| `wt remove [query]` | 안전 규칙 기반 worktree 제거 |
+| `wt prune` | prunable entry 미리보기/정리 |
+| `wt cleanup` | 추천 액션(prune/remove) 일괄 처리 |
+| `wt upgrade` | 릴리즈 버전으로 자체 업그레이드 |
+| `wt init <shell>` | 셸 함수 출력 (`wtr`, `wtg`, `wcd`) |
+
+상세 동작/옵션은 [docs/spec/cli.md](docs/spec/cli.md)를 참고하세요.
+
+## Common Workflows
+
+생성/이동:
 
 ```sh
-wt list
-wt path <query>
-wt create <branch>
-wt upgrade
-wt remove <query> --dry-run
-wt prune
+wt create feature/a
+cd "$(wt path feature/a)"
 ```
 
-## What It Does
+없으면 생성 후 이동:
 
-- 현재 repo의 registered worktree를 조회한다: `wt list`, `wt list --verify`, `wt list --verify-hosting`
-- worktree 경로를 안전하게 선택한다: `wt path`, `wt path --tui`, `wt root`, `wt run`
-- 없으면 생성하거나 기존 브랜치에 attach 한다: `wt create`, `wt path --create`
-- 릴리즈 태그 기준 최신 버전으로 업그레이드한다: `wt upgrade`
-- stale entry와 안전한 제거 대상을 분리해서 정리한다: `wt prune`, `wt remove`, `wt cleanup`
-- 셸 이동 helper와 completion 연동을 제공한다: `wt init <shell>`, `wt completion <shell>`
+```sh
+cd "$(wt path --create feature/a)"
+```
 
-## Interactive Flows
+특정 워크트리에서 테스트 실행:
 
-- `wt path --tui`: 전체 목록 또는 다중 매칭 후보에서 worktree를 고른다.
-- `wt remove --tui`: 대상을 고른 뒤 기존 remove safety와 confirm 흐름을 그대로 적용한다.
-- `wt prune --tui`: prunable entry를 TUI로 미리 보고, `--apply`일 때만 confirm 뒤 prune 한다.
+```sh
+wt run feature/a -- go test ./...
+```
 
-TUI는 `stdin`과 `stderr`가 모두 TTY일 때만 동작하며, 화면은 `stderr`, 최종 결과는 `stdout`에 유지된다.
+정리(권장 순서):
 
-## User Docs
+```sh
+wt prune              # stale entry preview
+wt prune --apply      # stale entry prune
+wt cleanup            # remove/prune 추천 액션 preview
+wt cleanup --apply    # 안전 기준 만족 항목만 실제 적용
+```
 
-- CLI 규칙: [docs/spec/cli.md](docs/spec/cli.md)
-- 셸 helper / completion: [docs/ux/shell.md](docs/ux/shell.md)
-- TUI 사용 흐름: [docs/ux/tui.md](docs/ux/tui.md)
-- 변경 이력: [docs/release/notes.md](docs/release/notes.md)
+## Upgrade & Release
+
+최신 릴리즈로 업그레이드:
+
+```sh
+wt upgrade
+```
+
+특정 버전으로 업그레이드:
+
+```sh
+wt upgrade --version v0.10.2
+```
+
+실행 명령만 확인:
+
+```sh
+wt upgrade --dry-run
+```
+
+릴리즈 정책/태그 규칙은 [docs/release/process.md](docs/release/process.md)를 참고하세요.
+
+## Safety Rules
+
+- 파괴적 동작은 기본값으로 실행하지 않습니다.
+- remove/prune 계열은 preview/confirm 흐름을 우선합니다.
+- 정상 출력은 `stdout`, 에러/안내는 `stderr`를 사용합니다.
+- TUI는 `stdin`/`stderr`가 모두 TTY일 때만 동작합니다.
+
+## Documentation
+
+- CLI 스펙: [docs/spec/cli.md](docs/spec/cli.md)
+- 셸 통합: [docs/ux/shell.md](docs/ux/shell.md)
+- TUI 가이드: [docs/ux/tui.md](docs/ux/tui.md)
+- 릴리즈 노트: [docs/release/notes.md](docs/release/notes.md)
+- 릴리즈 절차: [docs/release/process.md](docs/release/process.md)
 
 ## Development
 
@@ -64,8 +145,6 @@ make build
 make test
 make premerge
 ```
-
-릴리즈 설치는 `go install github.com/es5h/wt/cmd/wt@latest`를 사용한다.
 
 ## License
 
