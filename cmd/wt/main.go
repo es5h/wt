@@ -69,14 +69,16 @@ func newRootCmd() *cobra.Command {
 type depsKey struct{}
 
 type deps struct {
-	Runner        runner.Runner
-	Cwd           string
-	IsInteractive func() bool
-	CanUseTUI     func() bool
-	PickWorktree  func(cmd *cobra.Command, wts []worktree.Worktree, initialFilter string) (worktree.Worktree, error)
-	PreviewPrune  func(cmd *cobra.Command, items []pruneCandidate, apply bool) error
-	ConfirmPrune  func(in io.Reader, out io.Writer, count int) (bool, error)
-	InstallWithGo func(ctx context.Context, workDir string, installDir string, packageRef string) (runner.Result, error)
+	Runner         runner.Runner
+	Cwd            string
+	IsInteractive  func() bool
+	CanUseTUI      func() bool
+	PickWorktree   func(cmd *cobra.Command, wts []worktree.Worktree, initialFilter string) (worktree.Worktree, error)
+	PreviewPrune   func(cmd *cobra.Command, items []pruneCandidate, apply bool) error
+	ConfirmPrune   func(in io.Reader, out io.Writer, count int) (bool, error)
+	ReviewCleanup  func(cmd *cobra.Command, candidates []cleanupCandidate, apply bool) ([]cleanupCandidate, error)
+	ConfirmCleanup func(in io.Reader, out io.Writer, count int) (bool, error)
+	InstallWithGo  func(ctx context.Context, workDir string, installDir string, packageRef string) (runner.Result, error)
 }
 
 func ensureDeps(cmd *cobra.Command) error {
@@ -94,14 +96,16 @@ func ensureDeps(cmd *cobra.Command) error {
 	}
 
 	d := &deps{
-		Runner:        runner.OSRunner{Env: os.Environ()},
-		Cwd:           cwd,
-		IsInteractive: stdinIsTTY,
-		CanUseTUI:     stdioCanUseTUI,
-		PickWorktree:  pickWorktreeWithTUI,
-		PreviewPrune:  previewPruneWithTUI,
-		ConfirmPrune:  confirmPrune,
-		InstallWithGo: installWithGo,
+		Runner:         runner.OSRunner{Env: os.Environ()},
+		Cwd:            cwd,
+		IsInteractive:  stdinIsTTY,
+		CanUseTUI:      stdioCanUseTUI,
+		PickWorktree:   pickWorktreeWithTUI,
+		PreviewPrune:   previewPruneWithTUI,
+		ConfirmPrune:   confirmPrune,
+		ReviewCleanup:  reviewCleanupWithTUI,
+		ConfirmCleanup: confirmCleanup,
+		InstallWithGo:  installWithGo,
 	}
 
 	cmd.SetContext(context.WithValue(ctx, depsKey{}, d))

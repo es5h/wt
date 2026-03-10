@@ -1,15 +1,21 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/es5h/wt/internal/git"
 	"github.com/es5h/wt/internal/hosting"
+	tuipicker "github.com/es5h/wt/internal/tui/picker"
 	"github.com/es5h/wt/internal/worktree"
 )
 
@@ -40,6 +46,7 @@ type cleanupCandidate struct {
 func newCleanupCmd() *cobra.Command {
 	var apply bool
 	var jsonOut bool
+	var tui bool
 
 	cmd := &cobra.Command{
 		Use:           "cleanup",
@@ -48,9 +55,16 @@ func newCleanupCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if tui && jsonOut {
+				return usageError(fmt.Errorf("wt cleanup: --tui cannot be combined with --json"))
+			}
+
 			d, err := getDeps(cmd)
 			if err != nil {
 				return err
+			}
+			if tui && (d.CanUseTUI == nil || !d.CanUseTUI()) {
+				return usageError(fmt.Errorf("wt cleanup: --tui requires a TTY on stdin and stderr"))
 			}
 
 			ctx := cmd.Context()
@@ -67,7 +81,32 @@ func newCleanupCmd() *cobra.Command {
 				fmt.Fprintln(cmd.ErrOrStderr(), hostingNote)
 			}
 
-			items, err := runCleanup(cmd, d, repoRoot, candidates, apply)
+			selectedCandidates := candidates
+			if tui {
+				selectedCandidates = cleanupReviewCandidates(candidates)
+				if len(selectedCandidates) > 0 {
+					selectedCandidates, err = reviewCleanupCandidatesWithTUI(cmd, d, selectedCandidates, apply)
+					if err != nil {
+						return err
+					}
+				}
+			}
+
+			if tui && apply && len(selectedCandidates) > 0 {
+				confirm := confirmCleanup
+				if d.ConfirmCleanup != nil {
+					confirm = d.ConfirmCleanup
+				}
+				confirmed, err := confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), len(selectedCandidates))
+				if err != nil {
+					return err
+				}
+				if !confirmed {
+					return &exitError{Code: 1, Err: fmt.Errorf("wt cleanup: aborted")}
+				}
+			}
+
+			items, err := runCleanup(cmd, d, repoRoot, selectedCandidates, apply)
 			if err != nil {
 				return err
 			}
@@ -87,7 +126,23 @@ func newCleanupCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&apply, "apply", false, "actually run recommended prune/remove actions")
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "structured JSON output")
+	cmd.Flags().BoolVar(&tui, "tui", false, "review and select recommended candidates in TUI before returning or applying")
 	return cmd
+}
+
+func cleanupReviewCandidates(candidates []cleanupCandidate) []cleanupCandidate {
+	out := make([]cleanupCandidate, 0, len(candidates))
+	for _, candidate := range candidates {
+		switch candidate.Signals.RecommendedAction {
+		case "prune":
+			out = append(out, candidate)
+		case "remove":
+			if candidate.Signals.SafeToRemove {
+				out = append(out, candidate)
+			}
+		}
+	}
+	return out
 }
 
 func collectCleanupCandidates(ctx context.Context, d *deps, repoRoot string) ([]cleanupCandidate, string, error) {
@@ -203,6 +258,146 @@ func runCleanup(cmd *cobra.Command, d *deps, repoRoot string, candidates []clean
 	}
 
 	return items, nil
+}
+
+func reviewCleanupCandidatesWithTUI(cmd *cobra.Command, d *deps, candidates []cleanupCandidate, apply bool) ([]cleanupCandidate, error) {
+	if d == nil || d.CanUseTUI == nil || !d.CanUseTUI() {
+		return nil, usageError(fmt.Errorf("wt cleanup: --tui requires a TTY on stdin and stderr"))
+	}
+
+	review := reviewCleanupWithTUI
+	if d.ReviewCleanup != nil {
+		review = d.ReviewCleanup
+	}
+
+	selected, err := review(cmd, candidates, apply)
+	if err == nil {
+		return selected, nil
+	}
+	if errors.Is(err, tuipicker.ErrCancelled) {
+		return nil, &exitError{Code: 130, Err: fmt.Errorf("wt cleanup: review cancelled")}
+	}
+	if errors.Is(err, tuipicker.ErrNonTTY) {
+		return nil, usageError(fmt.Errorf("wt cleanup: --tui requires a TTY on stdin and stderr"))
+	}
+	return nil, err
+}
+
+const cleanupReviewDoneID = "__wt_cleanup_done__"
+
+func reviewCleanupWithTUI(cmd *cobra.Command, candidates []cleanupCandidate, apply bool) ([]cleanupCandidate, error) {
+	in, ok := cmd.InOrStdin().(*os.File)
+	if !ok {
+		return nil, tuipicker.ErrNonTTY
+	}
+	screen, ok := cmd.ErrOrStderr().(*os.File)
+	if !ok {
+		return nil, tuipicker.ErrNonTTY
+	}
+
+	selected := map[string]struct{}{}
+	for {
+		chosen, err := tuipicker.Run(in, screen, tuipicker.Config{
+			Title: "Select cleanup candidates",
+			Help:  cleanupReviewHelp(apply),
+			Items: buildCleanupReviewPickerItems(candidates, selected, apply),
+		})
+		if err != nil {
+			return nil, err
+		}
+		if chosen.ID == cleanupReviewDoneID {
+			break
+		}
+		if _, ok := selected[chosen.ID]; ok {
+			delete(selected, chosen.ID)
+		} else {
+			selected[chosen.ID] = struct{}{}
+		}
+	}
+
+	out := make([]cleanupCandidate, 0, len(selected))
+	for _, candidate := range candidates {
+		if _, ok := selected[candidate.Worktree.Path]; !ok {
+			continue
+		}
+		out = append(out, candidate)
+	}
+	return out, nil
+}
+
+func cleanupReviewHelp(apply bool) string {
+	if apply {
+		return "Enter toggle candidate, select continue row to confirm apply, Esc cancel"
+	}
+	return "Enter toggle candidate, select continue row to print preview, Esc cancel"
+}
+
+func buildCleanupReviewPickerItems(candidates []cleanupCandidate, selected map[string]struct{}, apply bool) []tuipicker.Item {
+	items := make([]tuipicker.Item, 0, len(candidates)+1)
+
+	continueLabel := "Continue: preview selected candidates"
+	if apply {
+		continueLabel = "Continue: apply selected candidates"
+	}
+	items = append(items, tuipicker.Item{
+		ID:         cleanupReviewDoneID,
+		Label:      continueLabel,
+		Meta:       fmt.Sprintf("selected %d/%d", len(selected), len(candidates)),
+		Detail:     "Press Enter to continue",
+		FilterText: "continue done preview apply",
+	})
+
+	for _, candidate := range candidates {
+		branch := strings.TrimPrefix(candidate.Worktree.Branch, "refs/heads/")
+		if branch == "" {
+			branch = filepath.Base(candidate.Worktree.Path)
+		}
+
+		action := candidate.Signals.RecommendedAction
+		if action == "" || action == "none" {
+			action = "skip"
+		}
+
+		prefix := "[ ]"
+		if _, ok := selected[candidate.Worktree.Path]; ok {
+			prefix = "[x]"
+		}
+
+		metaParts := []string{"action:" + action}
+		if candidate.Reason != "" {
+			metaParts = append(metaParts, candidate.Reason)
+		}
+
+		items = append(items, tuipicker.Item{
+			ID:         candidate.Worktree.Path,
+			Label:      prefix + " " + branch,
+			Detail:     candidate.Worktree.Path,
+			Meta:       strings.Join(metaParts, " | "),
+			FilterText: strings.Join([]string{branch, candidate.Worktree.Path, candidate.Worktree.Branch, candidate.Reason, action}, " "),
+		})
+	}
+
+	return items
+}
+
+func confirmCleanup(in io.Reader, out io.Writer, count int) (bool, error) {
+	prompt := fmt.Sprintf("Apply cleanup to %d selected candidate", count)
+	if count != 1 {
+		prompt += "s"
+	}
+	prompt += "? [y/N] "
+
+	if _, err := fmt.Fprint(out, prompt); err != nil {
+		return false, err
+	}
+
+	line, err := bufio.NewReader(in).ReadString('\n')
+	if err != nil && err != io.EOF {
+		return false, fmt.Errorf("wt cleanup: failed to read confirmation: %w", err)
+	}
+
+	answer := strings.ToLower(strings.TrimSpace(line))
+	return answer == "y" || answer == "yes", nil
 }
 
 func cleanupItemForCandidate(candidate cleanupCandidate, applied bool) cleanupItem {

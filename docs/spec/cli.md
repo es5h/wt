@@ -243,6 +243,15 @@ TUI 규칙:
 
 - `--apply`
 - `--json`
+- `--tui`: 추천된 prune/remove 후보를 TUI에서 선택해 preview/apply 대상으로 좁힌다.
+
+TUI 규칙:
+
+- `--tui`와 `--json`은 함께 쓸 수 없다.
+- `--tui`는 `stdin`과 `stderr`가 모두 TTY일 때만 허용된다.
+- `wt cleanup --tui`는 선택된 후보만 `would-prune`/`would-remove` preview를 출력한다.
+- `wt cleanup --tui --apply`는 선택된 후보만 대상으로 confirm prompt 이후 실행한다.
+- review 취소는 exit code `130`, confirm 거부는 `wt cleanup: aborted`다.
 
 출력 규칙:
 
