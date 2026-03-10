@@ -214,6 +214,56 @@ func TestList_VerifyHostingRejectsPorcelain(t *testing.T) {
 	}
 }
 
+func TestList_FiltersRejectPorcelain(t *testing.T) {
+	t.Parallel()
+
+	cmd, stdout, stderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{t: t},
+		Cwd:    "/cwd",
+	})
+	cmd.SetArgs([]string{"--porcelain", "--stale"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatalf("Execute() error = nil, want non-nil")
+	}
+	var ee *exitError
+	if !errors.As(err, &ee) || ee.Code != 2 {
+		t.Fatalf("error = %#v, want exitError code 2", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
+func TestList_FiltersRejectInvalidRecommended(t *testing.T) {
+	t.Parallel()
+
+	cmd, stdout, stderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{t: t},
+		Cwd:    "/cwd",
+	})
+	cmd.SetArgs([]string{"--recommended", "bad-value"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatalf("Execute() error = nil, want non-nil")
+	}
+	var ee *exitError
+	if !errors.As(err, &ee) || ee.Code != 2 {
+		t.Fatalf("error = %#v, want exitError code 2", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
 func TestList_Verify_Merged(t *testing.T) {
 	t.Parallel()
 
@@ -1342,5 +1392,307 @@ prunable gitdir file points to non-existent location
 	got := decodeJSONObjects(t, stdout.Bytes())
 	if got[0]["stale"] != true || got[0]["recommendedAction"] != "prune" || got[0]["safeToRemove"] != false {
 		t.Fatalf("unexpected derived fields: %#v", got[0])
+	}
+}
+
+func TestList_FilterStaleJSON(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+
+	livePath := filepath.Join(t.TempDir(), "live")
+	if err := os.MkdirAll(filepath.Join(livePath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create .git dir: %v", err)
+	}
+	missingPath := filepath.Join(t.TempDir(), "missing")
+
+	porcelain := strings.TrimSpace(`
+worktree `+livePath+`
+HEAD 1111111111111111111111111111111111111111
+branch refs/heads/live
+worktree `+missingPath+`
+HEAD 2222222222222222222222222222222222222222
+branch refs/heads/missing
+`) + "\n"
+
+	cmd, stdout, stderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+			},
+		},
+		Cwd: cwd,
+	})
+
+	cmd.SetArgs([]string{"--json", "--stale"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+
+	got := decodeJSONObjects(t, stdout.Bytes())
+	if len(got) != 1 {
+		t.Fatalf("len(json) = %d, want 1", len(got))
+	}
+	if got[0]["path"] != missingPath {
+		t.Fatalf("path = %#v, want %q", got[0]["path"], missingPath)
+	}
+	if got[0]["stale"] != true {
+		t.Fatalf("stale = %#v, want true", got[0]["stale"])
+	}
+}
+
+func TestList_FilterSafeToRemoveConsistency(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+
+	safePath := filepath.Join(t.TempDir(), "safe")
+	if err := os.MkdirAll(filepath.Join(safePath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create .git dir: %v", err)
+	}
+	keepPath := filepath.Join(t.TempDir(), "keep")
+	if err := os.MkdirAll(filepath.Join(keepPath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create .git dir: %v", err)
+	}
+
+	porcelain := strings.TrimSpace(`
+worktree `+safePath+`
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-safe
+worktree `+keepPath+`
+HEAD fedcbafedcbafedcbafedcbafedcbafedcbafedc
+branch refs/heads/feature-keep
+`) + "\n"
+
+	textCmd, textStdout, textStderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-safe", "main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-keep", "main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     errors.New("exit 1"),
+				},
+			},
+		},
+		Cwd: cwd,
+	})
+
+	textCmd.SetArgs([]string{"--verify", "--base", "main", "--safe-to-remove"})
+	if err := textCmd.Execute(); err != nil {
+		t.Fatalf("text Execute() error = %v", err)
+	}
+	if textStderr.Len() != 0 {
+		t.Fatalf("text stderr = %q, want empty", textStderr.String())
+	}
+	if !strings.Contains(textStdout.String(), safePath) {
+		t.Fatalf("text stdout = %q, want safe path", textStdout.String())
+	}
+	if strings.Contains(textStdout.String(), keepPath) {
+		t.Fatalf("text stdout = %q, keep path must be filtered out", textStdout.String())
+	}
+
+	jsonCmd, jsonStdout, jsonStderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-safe", "main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-keep", "main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     errors.New("exit 1"),
+				},
+			},
+		},
+		Cwd: cwd,
+	})
+
+	jsonCmd.SetArgs([]string{"--json", "--verify", "--base", "main", "--safe-to-remove"})
+	if err := jsonCmd.Execute(); err != nil {
+		t.Fatalf("json Execute() error = %v", err)
+	}
+	if jsonStderr.Len() != 0 {
+		t.Fatalf("json stderr = %q, want empty", jsonStderr.String())
+	}
+	got := decodeJSONObjects(t, jsonStdout.Bytes())
+	if len(got) != 1 {
+		t.Fatalf("len(json) = %d, want 1", len(got))
+	}
+	if got[0]["path"] != safePath {
+		t.Fatalf("json path = %#v, want %q", got[0]["path"], safePath)
+	}
+	if got[0]["safeToRemove"] != true {
+		t.Fatalf("json safeToRemove = %#v, want true", got[0]["safeToRemove"])
+	}
+}
+
+func TestList_FilterRecommendedRemove(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+
+	removePath := filepath.Join(t.TempDir(), "remove")
+	if err := os.MkdirAll(filepath.Join(removePath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create .git dir: %v", err)
+	}
+	keepPath := filepath.Join(t.TempDir(), "keep")
+	if err := os.MkdirAll(filepath.Join(keepPath, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create .git dir: %v", err)
+	}
+
+	porcelain := strings.TrimSpace(`
+worktree `+removePath+`
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-remove
+worktree `+keepPath+`
+HEAD fedcbafedcbafedcbafedcbafedcbafedcbafedc
+branch refs/heads/feature-keep
+`) + "\n"
+
+	cmd, stdout, stderr := newListCmdWithDeps(t, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-remove", "main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-keep", "main"},
+					res:     runner.Result{ExitCode: 1},
+					err:     errors.New("exit 1"),
+				},
+			},
+		},
+		Cwd: cwd,
+	})
+
+	cmd.SetArgs([]string{"--verify", "--base", "main", "--recommended", "remove"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+	if !strings.Contains(stdout.String(), removePath) {
+		t.Fatalf("stdout = %q, want remove path", stdout.String())
+	}
+	if strings.Contains(stdout.String(), keepPath) {
+		t.Fatalf("stdout = %q, keep path must be filtered out", stdout.String())
 	}
 }

@@ -27,11 +27,15 @@
 - `--verify`: path/.git 상태와 base ref merge 여부를 함께 검증
 - `--verify-hosting`: hosting(PR/MR) 기준 merge 여부를 함께 검증
 - `--base <ref>`: `--verify` 또는 `--verify-hosting`의 기준 ref. 기본값은 `origin/HEAD` 또는 `main`
+- `--stale`: `stale=true` 항목만 출력
+- `--safe-to-remove`: `safeToRemove=true` 항목만 출력
+- `--recommended <none|prune|remove>`: `recommendedAction` 값으로 필터
 
 조합 규칙:
 
 - `--json`과 `--porcelain`은 함께 쓸 수 없다.
 - `--porcelain`과 `--verify-hosting`은 함께 쓸 수 없다.
+- `--porcelain`과 `--stale`/`--safe-to-remove`/`--recommended`는 함께 쓸 수 없다.
 
 검증 규칙:
 
@@ -49,6 +53,12 @@
 - `recommendedAction=prune`: `prunable=true`
 - `recommendedAction=remove`: `prunable=false`, `current=false`, `primary=false`, `detached=false`, `locked=false`, `missing-path=false`, `missing-git=false`, 그리고 로컬 merge 또는 hosting merge가 확인된 경우
 - `safeToRemove=true`: `recommendedAction=remove`와 같은 안전 기준을 만족한 경우
+
+필터 규칙:
+
+- `--stale`, `--safe-to-remove`, `--recommended`는 모두 AND로 결합된다.
+- 텍스트 기본 출력과 `--json` 출력에 동일한 필터 semantics를 적용한다.
+- `--safe-to-remove`와 `--recommended remove`는 merge 검증 결과(`--verify`/`--verify-hosting`)가 없으면 대부분 매칭되지 않는다.
 
 ## `wt path [query]`
 
