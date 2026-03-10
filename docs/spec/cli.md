@@ -275,6 +275,8 @@ TUI 규칙:
 규칙:
 
 - rc 파일을 자동 수정하지 않는다.
+- 출력 상단 주석으로 opt-in 설치 경로를 안내한다(즉시 적용, rc 영구 적용, completion 설치 예시).
 - 현재 출력에는 `wtr`, `wtg`, `wcd`가 포함된다.
 - `wtr`는 `wt root`, `wtg`와 `wcd`는 `wt path`를 호출해 셸이 직접 `cd`하도록 연결한다.
 - `wt init zsh`에는 `_wt` completion이 설치된 경우 `wtg`와 `wcd`를 `wt path` completion에 연결하는 bridge도 포함된다.
+- completion 설치는 별도 opt-in이며 `wt completion <shell>` 출력 리다이렉션 방식만 안내하고 자동 설치/자동 로드는 수행하지 않는다.

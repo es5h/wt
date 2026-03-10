@@ -17,6 +17,7 @@ eval "$(wt init zsh)"
 ## `wt init <shell>`
 
 `wt init`은 rc 파일을 직접 수정하지 않고 helper 정의만 `stdout`으로 출력한다.
+출력 상단에는 셸별 opt-in 설치 가이드(즉시 적용, rc 영구 적용, completion 설치 예시)가 주석으로 포함된다.
 
 현재 포함되는 helper:
 
@@ -61,6 +62,7 @@ wt init fish | source
 ## Completion
 
 `wt`는 Cobra 기본 `wt completion <shell>` 명령을 제공한다.
+`wt init <shell>`은 completion을 자동 설치/자동 로드하지 않고, 아래 설치 명령을 주석으로 안내만 한다.
 
 zsh 설치:
 
