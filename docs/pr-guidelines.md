@@ -156,6 +156,7 @@ PR 본문에는 수정한 사용자 문서를 명시한다.
 
 - 팀 표준 구현 프롬프트: `docs/prompts/feature-pr-template.md`
 - 권장 방식: 템플릿 변수(`<...>`)를 채운 뒤 에이전트에 전달
-- 권장 구조: 시작 3~6줄 안에 `Goal`, `Constraints`, `Definition of Done`을 먼저 요약하고, 이어서 skill/worktree/검증 지시를 배치한다.
+- 권장 구조: 시작 3~6줄 안에 `Goal`, `Constraints`, `Definition of Done`을 먼저 요약한다.
+- 실전 기본형에는 skill, branch/worktree, 대상 파일, 기능 계약, 테스트, 문서 대상만 남긴다.
 - 병렬 에이전트 작업이면 각 프롬프트에 branch/worktree 이름을 명시해 작업 경계를 고정한다.
 - 리뷰 시 확인: 템플릿의 `Definition of Done` 체크 항목 충족 여부
