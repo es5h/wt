@@ -131,6 +131,33 @@ wt upgrade --dry-run
 - 정상 출력은 `stdout`, 에러/안내는 `stderr`를 사용합니다.
 - TUI는 `stdin`/`stderr`가 모두 TTY일 때만 동작합니다.
 
+## Agent Skill Registration
+
+`wt-worktree` 스킬을 등록하면 Claude/Codex에서 동일한 worktree 운영 규칙을 재사용할 수 있습니다.
+
+글로벌(모든 프로젝트) 등록:
+
+```text
+~/.claude/skills/wt-worktree/SKILL.md
+~/.codex/skills/wt-worktree/SKILL.md
+```
+
+리포 전용 등록:
+
+```text
+.claude/skills/wt-worktree/SKILL.md
+```
+
+스킬 파일에는 아래 흐름을 포함하는 것을 권장합니다.
+
+- `wt --version`, `wt list` 선확인
+- `wt path --create <branch>`로 작업 경로 확보
+- `wt run <branch> -- <cmd...>`로 실행
+- `wt prune`/`wt cleanup` preview 후 정리
+
+상세 템플릿과 도구별 차이는 [docs/ux/agents.md](docs/ux/agents.md)를 참고하세요.
+레포에 포함된 복붙용 샘플은 [docs/examples/skills/wt-worktree/SKILL.md](docs/examples/skills/wt-worktree/SKILL.md) 입니다.
+
 ## Documentation
 
 - CLI 스펙: [docs/spec/cli.md](docs/spec/cli.md)

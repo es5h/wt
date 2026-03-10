@@ -31,6 +31,15 @@
 - 실행: `make run ARGS="--help"`
 - PR 생성(선택): `make pr-create` (필요 시 `gh auth login` 먼저)
 
+## Skill usage policy
+- worktree 관련 작업(생성/탐색/정리/병렬 브랜치 운영)은 기본적으로 `wt-worktree` 스킬을 사용한다.
+- 스킬이 사용 불가한 환경이면, 동일한 표준 흐름을 수동으로 따른다.
+  - `wt --version`, `wt list` 선확인
+  - `wt path --create <branch>`로 작업 경로 확보
+  - `wt run <branch> -- <cmd...>`로 실행
+  - `wt prune`/`wt cleanup`은 preview 후 적용
+- 에이전트는 worktree 관련 작업에서 `git worktree` 원시 명령보다 `wt` 명령을 우선 사용한다.
+
 ## Docs hygiene
 - 사용자에게 보이는 동작(명령/옵션/출력)이 바뀌면:
   - 스펙은 `docs/`에 반영하고
