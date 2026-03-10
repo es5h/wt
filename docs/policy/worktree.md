@@ -84,6 +84,7 @@
 - 적용 범위:
   - `wt list`, `wt run`, `wt remove`, `wt prune`, `wt cleanup`
   - 특히 상태 전이(미리보기/적용)와 실패 표현이 있는 명령(`run/remove/prune/cleanup`)
+  - `wt doctor`는 별도 `action` 필드를 쓰지 않지만, text 상태 토큰과 JSON `status`의 의미를 동일하게 유지한다.
 - 권장 통일 규칙:
   - `action`은 텍스트 출력 첫 토큰과 JSON 값을 동일 어휘로 유지한다.
   - preview/apply 상태는 `applied`로 표현하고, 실제 엔트리 제거 여부는 `removed`로 분리한다.
