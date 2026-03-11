@@ -305,6 +305,7 @@ TUI 규칙:
 규칙:
 
 - 기본 동작은 현재 실행 중인 `wt` 바이너리 디렉터리를 `GOBIN`으로 사용한다.
+- 현재 실행 중인 바이너리가 `PATH`의 설치된 `wt`와 다르면(예: `./wt`) usage error로 실패하고 `wt upgrade`로 다시 실행하라고 안내한다.
 - `--version latest`(기본값)일 때는 `go list -m -versions github.com/es5h/wt`에서 최신 릴리즈 태그(`vX.Y.Z`)를 해석한 뒤 해당 버전을 설치한다.
 - `--version <vX.Y.Z|latest>`로 설치 버전을 고를 수 있다.
 - `--version` 값에는 `@`를 포함할 수 없다.
@@ -318,7 +319,8 @@ TUI 규칙:
 출력 규칙:
 
 - 성공 시 `stdout`에 `upgraded: <package@version>`, `install-dir: <path>`를 출력한다.
-- 실패 시 에러는 `stderr`로 전달되고 명령은 실패한다.
+- 로컬 빌드 바이너리(`./wt`)에서 실행한 경우 usage error(exit code `2`)로 실패하고 현재 실행 파일 경로와 `PATH`의 `wt` 경로를 함께 출력한다.
+- 그 외 실패 시 에러는 `stderr`로 전달되고 명령은 실패한다.
 
 ## `wt init <shell>`
 

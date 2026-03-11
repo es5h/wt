@@ -17,6 +17,15 @@ func TestUpgrade_DryRun(t *testing.T) {
 
 	d := &deps{
 		Cwd: "/repo",
+		Executable: func() (string, error) {
+			return "/repo/bin/wt-tool", nil
+		},
+		LookPath: func(file string) (string, error) {
+			if file != "wt" {
+				t.Fatalf("file = %q, want wt", file)
+			}
+			return "/repo/bin/wt", nil
+		},
 		ResolveLatestVersion: func(_ context.Context, workDir string, modulePath string) (string, error) {
 			if workDir != "/repo" {
 				t.Fatalf("workDir = %q, want /repo", workDir)
@@ -49,7 +58,18 @@ func TestUpgrade_DryRun(t *testing.T) {
 func TestUpgrade_InvalidVersionAtPrefix(t *testing.T) {
 	t.Parallel()
 
-	d := &deps{Cwd: "/repo"}
+	d := &deps{
+		Cwd: "/repo",
+		Executable: func() (string, error) {
+			return "/repo/bin/wt-tool", nil
+		},
+		LookPath: func(file string) (string, error) {
+			if file != "wt" {
+				t.Fatalf("file = %q, want wt", file)
+			}
+			return "/repo/bin/wt", nil
+		},
+	}
 
 	root := newRootCmd()
 	root.SetArgs([]string{"upgrade", "--version", "@latest"})
@@ -72,6 +92,15 @@ func TestUpgrade_UsesCurrentBinaryDir(t *testing.T) {
 	var gotWorkDir, gotInstallDir, gotPackageRef string
 	d := &deps{
 		Cwd: "/repo",
+		Executable: func() (string, error) {
+			return "/repo/bin/wt-tool", nil
+		},
+		LookPath: func(file string) (string, error) {
+			if file != "wt" {
+				t.Fatalf("file = %q, want wt", file)
+			}
+			return "/repo/bin/wt", nil
+		},
 		InstallWithGo: func(_ context.Context, workDir string, installDir string, packageRef string) (runner.Result, error) {
 			gotWorkDir = workDir
 			gotInstallDir = installDir
@@ -112,6 +141,15 @@ func TestUpgrade_InstallerError(t *testing.T) {
 
 	d := &deps{
 		Cwd: "/repo",
+		Executable: func() (string, error) {
+			return "/repo/bin/wt-tool", nil
+		},
+		LookPath: func(file string) (string, error) {
+			if file != "wt" {
+				t.Fatalf("file = %q, want wt", file)
+			}
+			return "/repo/bin/wt", nil
+		},
 		ResolveLatestVersion: func(_ context.Context, workDir string, modulePath string) (string, error) {
 			return "v0.10.2", nil
 		},
@@ -138,6 +176,15 @@ func TestUpgrade_ResolveLatestVersionError(t *testing.T) {
 
 	d := &deps{
 		Cwd: "/repo",
+		Executable: func() (string, error) {
+			return "/repo/bin/wt-tool", nil
+		},
+		LookPath: func(file string) (string, error) {
+			if file != "wt" {
+				t.Fatalf("file = %q, want wt", file)
+			}
+			return "/repo/bin/wt", nil
+		},
 		ResolveLatestVersion: func(_ context.Context, workDir string, modulePath string) (string, error) {
 			return "", fmt.Errorf("no released versions found")
 		},
@@ -153,5 +200,42 @@ func TestUpgrade_ResolveLatestVersionError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "failed to resolve latest release version") {
 		t.Fatalf("err = %q, want resolver failure message", err.Error())
+	}
+}
+
+func TestUpgrade_RejectsNonInstalledBinary(t *testing.T) {
+	t.Parallel()
+
+	d := &deps{
+		Cwd: "/repo",
+		Executable: func() (string, error) {
+			return "/repo/wt", nil
+		},
+		LookPath: func(file string) (string, error) {
+			if file != "wt" {
+				t.Fatalf("file = %q, want wt", file)
+			}
+			return "/usr/local/bin/wt", nil
+		},
+	}
+
+	root := newRootCmd()
+	root.SetArgs([]string{"upgrade"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, d))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var exitErr *exitError
+	if !errors.As(err, &exitErr) || exitErr.Code != 2 {
+		t.Fatalf("err = %#v, want usage error", err)
+	}
+	if !strings.Contains(err.Error(), "refusing to upgrade non-installed binary") {
+		t.Fatalf("err = %q, want non-installed binary message", err.Error())
+	}
+	if !strings.Contains(err.Error(), "rerun with 'wt upgrade'") {
+		t.Fatalf("err = %q, want rerun guidance", err.Error())
 	}
 }
