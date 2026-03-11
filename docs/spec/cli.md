@@ -288,6 +288,9 @@ TUI 규칙:
 - 점검 상태는 `ok`, `warn`, `unavailable`로 구분한다.
 - text 출력은 각 줄의 상태 토큰(`[ok]`, `[warn]`, `[unavailable]`)이 JSON `status`와 동일 의미를 갖는다.
 - 기본 점검 대상은 Git context, primary root 해석, `WT_ROOT`, repo-local `wt.root`, hosting CLI(`gh`/`glab`) 준비 상태, shell/completion 상태다.
+- hosting CLI 인증 점검 key는 `hosting.gh.auth`, `hosting.glab.auth`를 사용한다.
+- `SHELL`이 비어 있거나 미지원 셸이면 `shell.detect=warn`과 함께 `shell.init`, `shell.completion`을 `unavailable`로 출력해 체크 집합을 유지한다.
+- completion 점검은 셸별로 정의된 예상 위치들을 순서대로 검사하고, 하나라도 존재하면 `ok`를 반환한다.
 
 옵션:
 

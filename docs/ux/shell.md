@@ -119,4 +119,5 @@ whence -v _wt || true
 
 `_wt not found`면 completion을 먼저 설치해야 한다.
 
-helper/completion 상태를 한 번에 보려면 `wt doctor`를 실행한다.
+추가로 `wt doctor`를 실행하면 shell 감지, rc marker, completion 파일 존재 여부를 한 번에 점검할 수 있다.
+completion은 셸별 예상 경로를 순서대로 검사한다(예: zsh는 `~/.zsh/completions/_wt`, `~/.zfunc/_wt`; bash는 `~/.bash_completion.d/wt`, `~/.local/share/bash-completion/completions/wt`).
