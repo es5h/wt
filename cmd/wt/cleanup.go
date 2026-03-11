@@ -29,11 +29,18 @@ type cleanupItem struct {
 	Reason            string `json:"reason"`
 	SafeToRemove      bool   `json:"safeToRemove"`
 
-	MergedIntoBase   *bool  `json:"mergedIntoBase,omitempty"`
-	BaseRef          string `json:"baseRef,omitempty"`
-	MergedViaHosting *bool  `json:"mergedViaHosting,omitempty"`
-	HostingProvider  string `json:"hostingProvider,omitempty"`
-	HostingKind      string `json:"hostingKind,omitempty"`
+	PathExists          *bool  `json:"pathExists,omitempty"`
+	DotGitExists        *bool  `json:"dotGitExists,omitempty"`
+	Valid               *bool  `json:"valid,omitempty"`
+	MergedIntoBase      *bool  `json:"mergedIntoBase,omitempty"`
+	BaseRef             string `json:"baseRef,omitempty"`
+	HostingProvider     string `json:"hostingProvider,omitempty"`
+	HostingKind         string `json:"hostingKind,omitempty"`
+	MergedViaHosting    *bool  `json:"mergedViaHosting,omitempty"`
+	HostingReason       string `json:"hostingReason,omitempty"`
+	HostingChangeNumber *int   `json:"hostingChangeNumber,omitempty"`
+	HostingChangeTitle  string `json:"hostingChangeTitle,omitempty"`
+	HostingChangeURL    string `json:"hostingChangeUrl,omitempty"`
 }
 
 type cleanupCandidate struct {
@@ -412,11 +419,18 @@ func cleanupItemForCandidate(candidate cleanupCandidate, applied bool) cleanupIt
 		SafeToRemove:      candidate.Signals.SafeToRemove,
 	}
 	if candidate.Info != nil {
+		item.PathExists = &candidate.Info.PathExists
+		item.DotGitExists = &candidate.Info.DotGitExists
+		item.Valid = &candidate.Info.Valid
 		item.MergedIntoBase = candidate.Info.MergedIntoBase
 		item.BaseRef = candidate.Info.BaseRef
-		item.MergedViaHosting = candidate.Info.MergedViaHosting
 		item.HostingProvider = candidate.Info.HostingProvider
 		item.HostingKind = candidate.Info.HostingKind
+		item.MergedViaHosting = candidate.Info.MergedViaHosting
+		item.HostingReason = candidate.Info.HostingReason
+		item.HostingChangeNumber = candidate.Info.HostingNumber
+		item.HostingChangeTitle = candidate.Info.HostingTitle
+		item.HostingChangeURL = candidate.Info.HostingURL
 	}
 	return item
 }
