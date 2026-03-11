@@ -260,6 +260,8 @@ TUI 규칙:
 
 - `--apply`
 - `--json`: `{path, branch, recommendedAction, action, applied, removed, reason, safeToRemove, ...verifyFields}` 배열
+  - local verify 필드는 `pathExists`, `dotGitExists`, `valid`, `mergedIntoBase`, `baseRef`를 포함한다.
+  - hosting verify가 수행되면 `hostingProvider`, `hostingKind`, `mergedViaHosting`, `hostingReason`, `hostingChangeNumber`, `hostingChangeTitle`, `hostingChangeUrl`를 포함한다.
 - `--tui`: 추천된 prune/remove 후보를 TUI에서 선택해 preview/apply 대상으로 좁힌다.
 
 TUI 규칙:
