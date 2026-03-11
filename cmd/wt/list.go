@@ -232,18 +232,19 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 		LockReason        string `json:"lockReason,omitempty"`
 		PruneReason       string `json:"pruneReason,omitempty"`
 
-		PathExists          *bool  `json:"pathExists,omitempty"`
-		DotGitExists        *bool  `json:"dotGitExists,omitempty"`
-		Valid               *bool  `json:"valid,omitempty"`
-		MergedIntoBase      *bool  `json:"mergedIntoBase,omitempty"`
-		BaseRef             string `json:"baseRef,omitempty"`
-		HostingProvider     string `json:"hostingProvider,omitempty"`
-		HostingKind         string `json:"hostingKind,omitempty"`
-		MergedViaHosting    *bool  `json:"mergedViaHosting,omitempty"`
-		HostingReason       string `json:"hostingReason,omitempty"`
-		HostingChangeNumber *int   `json:"hostingChangeNumber,omitempty"`
-		HostingChangeTitle  string `json:"hostingChangeTitle,omitempty"`
-		HostingChangeURL    string `json:"hostingChangeUrl,omitempty"`
+		PathExists             *bool  `json:"pathExists,omitempty"`
+		DotGitExists           *bool  `json:"dotGitExists,omitempty"`
+		Valid                  *bool  `json:"valid,omitempty"`
+		MergedIntoBase         *bool  `json:"mergedIntoBase,omitempty"`
+		BaseRef                string `json:"baseRef,omitempty"`
+		HostingProvider        string `json:"hostingProvider,omitempty"`
+		HostingKind            string `json:"hostingKind,omitempty"`
+		MergedViaHosting       *bool  `json:"mergedViaHosting,omitempty"`
+		HostingReason          string `json:"hostingReason,omitempty"`
+		HostingChangeNumber    *int   `json:"hostingChangeNumber,omitempty"`
+		HostingChangeTitle     string `json:"hostingChangeTitle,omitempty"`
+		HostingChangeURL       string `json:"hostingChangeURL,omitempty"`
+		HostingChangeURLLegacy string `json:"hostingChangeUrl,omitempty"`
 	}
 
 	out := baseJSONWorktree{
@@ -276,6 +277,7 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 		out.HostingChangeNumber = jwt.Verify.HostingNumber
 		out.HostingChangeTitle = jwt.Verify.HostingTitle
 		out.HostingChangeURL = jwt.Verify.HostingURL
+		out.HostingChangeURLLegacy = jwt.Verify.HostingURL
 	}
 
 	if jwt.Verify != nil && (jwt.Verify.MergedIntoBase == nil || jwt.Verify.HostingProvider != "" || jwt.Verify.BaseRef == "") {
@@ -319,6 +321,7 @@ func (jwt jsonWorktree) MarshalJSON() ([]byte, error) {
 				outMap["hostingChangeTitle"] = jwt.Verify.HostingTitle
 			}
 			if jwt.Verify.HostingURL != "" {
+				outMap["hostingChangeURL"] = jwt.Verify.HostingURL
 				outMap["hostingChangeUrl"] = jwt.Verify.HostingURL
 			}
 		}

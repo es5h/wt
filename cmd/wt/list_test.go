@@ -645,8 +645,11 @@ branch refs/heads/feature-x
 	if got[0]["hostingChangeTitle"] != "feature x" {
 		t.Fatalf("hostingChangeTitle = %#v, want feature x", got[0]["hostingChangeTitle"])
 	}
-	if got[0]["hostingChangeUrl"] != "https://github.com/es5h/wt/pull/42" {
-		t.Fatalf("hostingChangeUrl = %#v, want PR URL", got[0]["hostingChangeUrl"])
+	if got[0]["hostingChangeURL"] != "https://github.com/es5h/wt/pull/42" {
+		t.Fatalf("hostingChangeURL = %#v, want PR URL", got[0]["hostingChangeURL"])
+	}
+	if got[0]["hostingChangeUrl"] != got[0]["hostingChangeURL"] {
+		t.Fatalf("hostingChangeUrl = %#v, want legacy alias to match hostingChangeURL", got[0]["hostingChangeUrl"])
 	}
 	if got[0]["recommendedAction"] != "remove" || got[0]["safeToRemove"] != true || got[0]["stale"] != false {
 		t.Fatalf("unexpected derived fields: %#v", got[0])
@@ -906,8 +909,11 @@ branch refs/heads/feature-x
 	if got[0]["hostingChangeTitle"] != "feature x" {
 		t.Fatalf("hostingChangeTitle = %#v, want feature x", got[0]["hostingChangeTitle"])
 	}
-	if got[0]["hostingChangeUrl"] != "https://gitlab.com/team/wt/-/merge_requests/17" {
-		t.Fatalf("hostingChangeUrl = %#v, want MR URL", got[0]["hostingChangeUrl"])
+	if got[0]["hostingChangeURL"] != "https://gitlab.com/team/wt/-/merge_requests/17" {
+		t.Fatalf("hostingChangeURL = %#v, want MR URL", got[0]["hostingChangeURL"])
+	}
+	if got[0]["hostingChangeUrl"] != got[0]["hostingChangeURL"] {
+		t.Fatalf("hostingChangeUrl = %#v, want legacy alias to match hostingChangeURL", got[0]["hostingChangeUrl"])
 	}
 }
 
