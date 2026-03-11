@@ -944,3 +944,68 @@ prunable gitdir file points to non-existent location
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestRemove_ForcePermissionDeniedIncludesDiagnosticTarget(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+	target := "/repo/.wt/feature-x"
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree /repo/.wt/feature-x
+HEAD abcdefabcdefabcdefabcdefabcdefabcdefabcd
+branch refs/heads/feature-x
+`) + "\n"
+
+	root := newRootCmd()
+	root.SetArgs([]string{"remove", "feature-x", "--force"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte("/repo/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "remove", "--force", target},
+					res:     runner.Result{ExitCode: 1, Stderr: []byte("permission denied")},
+					err:     assertErr("exit 1"),
+				},
+			},
+		},
+		Cwd:           cwd,
+		IsInteractive: func() bool { return false },
+	}))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "permission denied") {
+		t.Fatalf("err = %q, want permission denied", err.Error())
+	}
+	if !strings.Contains(err.Error(), "target="+target) {
+		t.Fatalf("err = %q, want target diagnostic", err.Error())
+	}
+}
