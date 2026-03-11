@@ -34,10 +34,11 @@ type doctorReport struct {
 }
 
 type shellSetup struct {
-	RCPath         string
-	CompletionPath string
-	InitMarkers    []string
-	Hint           string
+	RCPath          string
+	CompletionPaths []string
+	InitMarkers     []string
+	InitHint        string
+	CompletionHint  string
 }
 
 func newDoctorCmd() *cobra.Command {
@@ -273,6 +274,16 @@ func runDoctor(ctx context.Context, d *deps) doctorReport {
 			Status:  doctorStatusWarn,
 			Summary: "SHELL is not set",
 		})
+		report.Checks = append(report.Checks, doctorCheck{
+			Name:    "shell.init",
+			Status:  doctorStatusUnavailable,
+			Summary: "shell init check skipped: shell not detected",
+		})
+		report.Checks = append(report.Checks, doctorCheck{
+			Name:    "shell.completion",
+			Status:  doctorStatusUnavailable,
+			Summary: "completion check skipped: shell not detected",
+		})
 		return report
 	}
 
@@ -284,6 +295,16 @@ func runDoctor(ctx context.Context, d *deps) doctorReport {
 			Status:  doctorStatusWarn,
 			Summary: fmt.Sprintf("unsupported shell: %s", shellName),
 			Details: []string{"supported: zsh, bash, fish"},
+		})
+		report.Checks = append(report.Checks, doctorCheck{
+			Name:    "shell.init",
+			Status:  doctorStatusUnavailable,
+			Summary: "shell init check skipped: unsupported shell",
+		})
+		report.Checks = append(report.Checks, doctorCheck{
+			Name:    "shell.completion",
+			Status:  doctorStatusUnavailable,
+			Summary: "completion check skipped: unsupported shell",
 		})
 		return report
 	}
@@ -300,8 +321,12 @@ func runDoctor(ctx context.Context, d *deps) doctorReport {
 		report.Checks = append(report.Checks, doctorCheck{
 			Name:    "shell.init",
 			Status:  doctorStatusWarn,
-			Summary: "cannot read shell rc file",
-			Details: []string{setup.RCPath, fmt.Sprintf("hint: eval \"$(wt init %s)\"", shellName)},
+			Summary: "shell rc file is not readable; cannot verify wt init marker",
+			Details: []string{
+				"rc: " + setup.RCPath,
+				"error: " + strings.TrimSpace(rcErr.Error()),
+				setup.InitHint,
+			},
 		})
 	} else {
 		rcText := string(rcBytes)
@@ -309,32 +334,48 @@ func runDoctor(ctx context.Context, d *deps) doctorReport {
 			report.Checks = append(report.Checks, doctorCheck{
 				Name:    "shell.init",
 				Status:  doctorStatusOK,
-				Summary: "shell helper markers found in rc file",
-				Details: []string{setup.RCPath},
+				Summary: "wt init marker found in rc file",
+				Details: []string{"rc: " + setup.RCPath},
 			})
 		} else {
 			report.Checks = append(report.Checks, doctorCheck{
 				Name:    "shell.init",
 				Status:  doctorStatusWarn,
-				Summary: "shell helper markers not found in rc file",
-				Details: []string{setup.RCPath, fmt.Sprintf("hint: eval \"$(wt init %s)\"", shellName)},
+				Summary: "wt init marker not found in rc file",
+				Details: []string{
+					"rc: " + setup.RCPath,
+					setup.InitHint,
+				},
 			})
 		}
 	}
 
-	if fileExists(setup.CompletionPath) {
+	foundCompletionPath := ""
+	for _, candidate := range setup.CompletionPaths {
+		if fileExists(candidate) {
+			foundCompletionPath = candidate
+			break
+		}
+	}
+
+	if foundCompletionPath != "" {
 		report.Checks = append(report.Checks, doctorCheck{
 			Name:    "shell.completion",
 			Status:  doctorStatusOK,
 			Summary: "completion file found",
-			Details: []string{setup.CompletionPath, setup.Hint},
+			Details: []string{"path: " + foundCompletionPath},
 		})
 	} else {
+		details := make([]string, 0, len(setup.CompletionPaths)+1)
+		for _, candidate := range setup.CompletionPaths {
+			details = append(details, "checked: "+candidate)
+		}
+		details = append(details, setup.CompletionHint)
 		report.Checks = append(report.Checks, doctorCheck{
 			Name:    "shell.completion",
 			Status:  doctorStatusWarn,
-			Summary: "completion file is missing",
-			Details: []string{setup.CompletionPath, setup.Hint},
+			Summary: "completion file not found in expected locations",
+			Details: details,
 		})
 	}
 
@@ -342,7 +383,7 @@ func runDoctor(ctx context.Context, d *deps) doctorReport {
 }
 
 func doctorAuthCheck(ctx context.Context, d *deps, lookPath func(file string) (string, error), getenv func(key string) string, cli string, envKey string, expected bool) doctorCheck {
-	name := "hosting." + cli
+	name := "hosting." + cli + ".auth"
 	explicit := strings.TrimSpace(getenv(envKey))
 	resolved := ""
 	source := "PATH"
@@ -357,6 +398,8 @@ func doctorAuthCheck(ctx context.Context, d *deps, lookPath func(file string) (s
 		summary := cli + " not found"
 		if expected {
 			summary = cli + " is required for current hosting provider"
+		} else {
+			summary = cli + " not found (optional for current hosting provider)"
 		}
 		return doctorCheck{
 			Name:    name,
@@ -370,7 +413,7 @@ func doctorAuthCheck(ctx context.Context, d *deps, lookPath func(file string) (s
 	if err != nil {
 		summary := cli + " found, but auth status failed"
 		if expected {
-			summary = cli + " found, but authentication is unavailable"
+			summary = cli + " found, but authentication is required or unavailable"
 		}
 		details := []string{fmt.Sprintf("source: %s", source), fmt.Sprintf("path: %s", resolved)}
 		if msg := strings.TrimSpace(string(res.Stderr)); msg != "" {
@@ -396,24 +439,27 @@ func doctorShellSetup(home string, shell string) (shellSetup, bool) {
 	switch shell {
 	case "zsh":
 		return shellSetup{
-			RCPath:         filepath.Join(home, ".zshrc"),
-			CompletionPath: filepath.Join(home, ".zsh", "completions", "_wt"),
-			InitMarkers:    []string{"wt init zsh", "wtr()", "wtg()"},
-			Hint:           "hint: wt completion zsh > ~/.zsh/completions/_wt",
+			RCPath:          filepath.Join(home, ".zshrc"),
+			CompletionPaths: []string{filepath.Join(home, ".zsh", "completions", "_wt"), filepath.Join(home, ".zfunc", "_wt")},
+			InitMarkers:     []string{"wt init zsh", "wtr()", "wtg()"},
+			InitHint:        "hint: eval \"$(wt init zsh)\"",
+			CompletionHint:  "hint: wt completion zsh > ~/.zsh/completions/_wt",
 		}, true
 	case "bash":
 		return shellSetup{
-			RCPath:         filepath.Join(home, ".bashrc"),
-			CompletionPath: filepath.Join(home, ".bash_completion.d", "wt"),
-			InitMarkers:    []string{"wt init bash", "wtr()", "wtg()"},
-			Hint:           "hint: wt completion bash > ~/.bash_completion.d/wt",
+			RCPath:          filepath.Join(home, ".bashrc"),
+			CompletionPaths: []string{filepath.Join(home, ".bash_completion.d", "wt"), filepath.Join(home, ".local", "share", "bash-completion", "completions", "wt")},
+			InitMarkers:     []string{"wt init bash", "wtr()", "wtg()"},
+			InitHint:        "hint: eval \"$(wt init bash)\"",
+			CompletionHint:  "hint: wt completion bash > ~/.bash_completion.d/wt",
 		}, true
 	case "fish":
 		return shellSetup{
-			RCPath:         filepath.Join(home, ".config", "fish", "config.fish"),
-			CompletionPath: filepath.Join(home, ".config", "fish", "completions", "wt.fish"),
-			InitMarkers:    []string{"wt init fish", "function wtr", "function wtg"},
-			Hint:           "hint: wt completion fish > ~/.config/fish/completions/wt.fish",
+			RCPath:          filepath.Join(home, ".config", "fish", "config.fish"),
+			CompletionPaths: []string{filepath.Join(home, ".config", "fish", "completions", "wt.fish")},
+			InitMarkers:     []string{"wt init fish", "function wtr", "function wtg"},
+			InitHint:        "hint: eval (wt init fish)",
+			CompletionHint:  "hint: wt completion fish > ~/.config/fish/completions/wt.fish",
 		}, true
 	default:
 		return shellSetup{}, false
