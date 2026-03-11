@@ -1,39 +1,38 @@
 # Agent integration guide
 
-이 문서는 `wt`를 Claude/Codex 에이전트 워크플로에서 재사용하기 위한 실무 가이드다.
+이 문서는 `wt`를 Claude/Codex 에이전트 워크플로에 넣을 때 필요한 최소 흐름만 정리한다.
+핵심은 helper 설치 자동화가 아니라 worktree 운영 규칙을 재사용하는 것이다.
 
-## Key point
+## Baseline flow
 
-Claude Code와 Codex 모두 `SKILL.md` 기반 스킬을 지원한다.
-따라서 `wt` 운영 규칙은 공통 스킬 문서로 관리하고, 도구별 차이는 설치 경로/호출 방식만 분리하는 것을 권장한다.
-
-## Common baseline
-
-모든 에이전트 환경에서 먼저 확인:
+모든 에이전트 작업에서 먼저 확인:
 
 ```sh
 wt --version
 wt list
 ```
 
-권장 실행 흐름:
+권장 순서:
 
 ```sh
-# 작업 브랜치용 worktree 경로 확보
 wt path --create <branch>
-
-# 해당 worktree에서 명령 실행
 wt run <branch> -- <cmd...>
-
-# 정리 전 미리보기
 wt prune
 wt cleanup
 ```
 
-## Shared skill template (`SKILL.md`)
+`wt`가 대신하지 않는 것:
 
-아래 템플릿을 공통으로 사용하면 된다.
-레포에 포함된 샘플 파일: `docs/examples/skills/wt-worktree/SKILL.md`
+- 에이전트 설치/인증
+- 셸 rc 자동 수정
+- completion 자동 설치
+
+## Shared skill
+
+Claude Code와 Codex는 둘 다 `SKILL.md` 기반 스킬을 쓸 수 있다.
+그래서 `wt` 운영 규칙은 공통 skill 하나로 두고, 도구별 차이는 설치 경로만 분리하는 편이 가장 단순하다.
+
+샘플 파일: `docs/examples/skills/wt-worktree/SKILL.md`
 
 ```md
 # wt-worktree
@@ -56,49 +55,61 @@ wt cleanup
 - remove/prune는 기본적으로 preview 먼저 실행
 ```
 
-## Codex
+## Register the skill
 
-스킬 위치 예시:
+### Codex
 
-```text
-$CODEX_HOME/skills/wt-worktree/
-  SKILL.md
-```
-
-호출 예시:
+전역:
 
 ```text
-wt-worktree 스킬을 사용해서 <task>
+$CODEX_HOME/skills/wt-worktree/SKILL.md
 ```
 
-## Claude Code
+### Claude Code
 
-스킬 위치 예시(프로젝트/사용자):
+프로젝트 또는 전역:
 
 ```text
 .claude/skills/wt-worktree/SKILL.md
 ~/.claude/skills/wt-worktree/SKILL.md
 ```
 
-호출 예시:
+## Use it in prompts
+
+예시:
 
 ```text
 wt-worktree 스킬을 사용해서 <task>
 ```
 
-참고:
+프롬프트에는 아래 세 줄이 있으면 충분하다.
 
-- Claude Code는 커스텀 커맨드가 skills로 통합되었다.
-- 하위 에이전트는 `.claude/agents/*.md` 또는 `~/.claude/agents/*.md`를 사용한다.
+- `wt --version`, `wt list`
+- `wt path --create <branch>`
+- 그 worktree에서만 작업
 
-## Recommended team policy
+## Install and upgrade
 
-- 새 자동화/에이전트 작업 PR에는 사용한 `wt` 명령과 exit code를 기록한다.
-- `wt upgrade`를 주기적으로 실행해 팀 에이전트 환경 버전을 맞춘다.
-- 사용자-facing 변경 시 `VERSION`, `docs/release/notes.md`, 관련 UX 문서를 함께 갱신한다.
+설치 기준:
+
+```sh
+go install github.com/es5h/wt/cmd/wt@latest
+```
+
+이미 설치돼 있으면:
+
+```sh
+wt upgrade
+```
+
+helper나 skill 등록은 여전히 사용자가 직접 opt-in 해야 한다.
+
+## Team policy
+
+- 새 자동화/에이전트 PR에는 사용한 `wt` 명령과 exit code를 남긴다.
+- 사용자-facing 변경이면 `VERSION`, `docs/release/notes.md`, 관련 UX 문서를 같이 갱신한다.
 
 ## References
 
 - Claude Code Agent Skills: `https://docs.claude.com/en/docs/claude-code/skills`
-- Claude Code Slash commands (Skills와 차이): `https://docs.claude.com/en/docs/claude-code/slash-commands`
 - Claude Code Subagents: `https://docs.anthropic.com/en/docs/claude-code/sub-agents`
