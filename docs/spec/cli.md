@@ -194,6 +194,8 @@ branch용 worktree를 만든다.
 - primary worktree는 제거할 수 없다.
 - `prunable` entry는 remove 대상이 아니며 `wt prune --apply`를 사용해야 한다.
 - 실제 삭제는 `git worktree remove --force <path>`를 사용한다.
+- remove 실행 전 대상 worktree 내부 파일/디렉터리(예: `.cache`)의 readonly 권한을 owner-write 가능 상태로 보정한 뒤 삭제를 시도한다.
+- readonly 항목 때문에 실패하면 error에 `target=<path>`와 함께 진단 메시지를 포함한다.
 
 옵션:
 
@@ -255,6 +257,7 @@ TUI 규칙:
 - `recommendedAction=remove`는 `safeToRemove=true`인 항목에만 적용한다.
 - 실제 prune은 `git worktree prune --expire now`
 - 실제 remove는 `git worktree remove --force <path>`
+- remove 실행 경로는 `wt remove`와 동일한 readonly 권한 보정/실패 진단 규칙을 사용한다.
 
 옵션:
 

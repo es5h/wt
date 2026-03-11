@@ -1473,6 +1473,103 @@ func TestBuildCleanupReviewPickerItems(t *testing.T) {
 	}
 }
 
+func TestCleanup_ApplyRemovePermissionDeniedIncludesDiagnosticTarget(t *testing.T) {
+	t.Parallel()
+
+	const cwd = "/cwd"
+	const repo = "/repo"
+	target := filepath.Join(t.TempDir(), "feature-remove")
+	if err := os.MkdirAll(filepath.Join(target, ".git"), 0o755); err != nil {
+		t.Fatalf("failed to create remove worktree: %v", err)
+	}
+	porcelain := strings.TrimSpace(`
+worktree /repo
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+
+worktree `+target+`
+HEAD 1111111111111111111111111111111111111111
+branch refs/heads/feature-remove
+`) + "\n"
+
+	root := newRootCmd()
+	root.SetArgs([]string{"cleanup", "--apply"})
+	root.SetContext(context.WithValue(context.Background(), depsKey{}, &deps{
+		Runner: &fakeRunner{
+			t: t,
+			calls: []fakeCall{
+				{
+					workDir: cwd,
+					name:    "git",
+					args:    []string{"rev-parse", "--show-toplevel"},
+					res:     runner.Result{Stdout: []byte(repo + "\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "list", "--porcelain"},
+					res:     runner.Result{Stdout: []byte(porcelain), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"},
+					res:     runner.Result{Stdout: []byte("refs/remotes/origin/main\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--verify", "--quiet", "origin/main^{commit}"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"remote", "get-url", "origin"},
+					res:     runner.Result{ExitCode: 2},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"rev-parse", "--path-format=absolute", "--git-common-dir"},
+					res:     runner.Result{Stdout: []byte(repo + "/.git\n"), ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/main", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"merge-base", "--is-ancestor", "refs/heads/feature-remove", "origin/main"},
+					res:     runner.Result{ExitCode: 0},
+				},
+				{
+					workDir: repo,
+					name:    "git",
+					args:    []string{"worktree", "remove", "--force", target},
+					res:     runner.Result{ExitCode: 1, Stderr: []byte("permission denied")},
+					err:     assertErr("exit 1"),
+				},
+			},
+		},
+		Cwd: cwd,
+	}))
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "permission denied") {
+		t.Fatalf("err = %q, want permission denied", err.Error())
+	}
+	if !strings.Contains(err.Error(), "target="+target) {
+		t.Fatalf("err = %q, want target diagnostic", err.Error())
+	}
+}
+
 type staticErr string
 
 func (e staticErr) Error() string { return string(e) }
