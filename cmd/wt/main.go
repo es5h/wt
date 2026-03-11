@@ -73,6 +73,7 @@ type depsKey struct{}
 type deps struct {
 	Runner               runner.Runner
 	Cwd                  string
+	Executable           func() (string, error)
 	IsInteractive        func() bool
 	CanUseTUI            func() bool
 	PickWorktree         func(cmd *cobra.Command, wts []worktree.Worktree, initialFilter string) (worktree.Worktree, error)
@@ -105,6 +106,7 @@ func ensureDeps(cmd *cobra.Command) error {
 	d := &deps{
 		Runner:               runner.OSRunner{Env: os.Environ()},
 		Cwd:                  cwd,
+		Executable:           os.Executable,
 		IsInteractive:        stdinIsTTY,
 		CanUseTUI:            stdioCanUseTUI,
 		PickWorktree:         pickWorktreeWithTUI,

@@ -32,13 +32,26 @@ func newUpgradeCmd() *cobra.Command {
 				return err
 			}
 
-			execPath, err := os.Executable()
+			executable := d.Executable
+			if executable == nil {
+				executable = os.Executable
+			}
+			execPath, err := executable()
 			if err != nil {
 				return fmt.Errorf("wt upgrade: failed to resolve current executable path: %w", err)
 			}
 			installDir := filepath.Dir(execPath)
-			if filepath.Base(execPath) != "wt" {
-				if wtPath, lookErr := exec.LookPath("wt"); lookErr == nil && strings.TrimSpace(wtPath) != "" {
+			lookPath := d.LookPath
+			if lookPath == nil {
+				lookPath = exec.LookPath
+			}
+			if wtPath, lookErr := lookPath("wt"); lookErr == nil && strings.TrimSpace(wtPath) != "" {
+				wtPath = filepath.Clean(wtPath)
+				execPath = filepath.Clean(execPath)
+				if filepath.Base(execPath) == "wt" && execPath != wtPath {
+					return usageError(fmt.Errorf("wt upgrade: refusing to upgrade non-installed binary: current=%s, path-wt=%s; rerun with 'wt upgrade'", execPath, wtPath))
+				}
+				if filepath.Base(execPath) != "wt" {
 					installDir = filepath.Dir(wtPath)
 				}
 			}
