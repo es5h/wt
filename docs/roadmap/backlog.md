@@ -4,28 +4,37 @@
 
 ## Prioritized candidates
 
-1. Structured JSON consistency
-- 핵심 `action`/`applied`/`removed` semantics 는 이미 정리됐다.
-- 남은 범위는 `list --json`과 `cleanup --json`의 verify field 범위 차이, deprecated alias 정리 시점처럼 스크립트 소비자 관점의 마감 작업에 가깝다.
+1. `wt cleanup`/`wt list` 후속 polish
+- 현재 `main`에는 `cleanup --tui`, `list` 파생 신호 필터(`--stale`, `--safe-to-remove`, `--recommended`)가 이미 들어가 있다.
+- 다음 단계는 기능 추가가 아니라 naming/help/output contract 를 안정화하는 작은 단위 작업으로 진행한다.
 
-2. `wt doctor` follow-up polish
-- `doctor`는 이제 `main`에 들어왔지만, 실제 사용 결과를 기준으로 check naming, warning copy, shell/completion 판별 방식, JSON/text parity 를 다듬을 여지가 있다.
-- 명령 추가보다 진단 결과 신뢰도와 문제 재현성을 높이는 후속 정리가 먼저일 가능성이 크다.
+### Work packages (implementation-sized)
 
-3. Agent/shell UX follow-up hardening
-- 최근 머지로 shell/completion 설치 가이드와 에이전트용 prompt template 이 들어갔다.
-- 실제 사용 결과를 보고 문서 길이, example 밀도, helper 범위, upgrade/install 안내 문구를 줄이거나 보정하는 후속 정리가 필요할 수 있다.
-- 새 기능 추가보다는 실제 사용 흔적을 기준으로 다듬는 성격이 강하다.
+1. Package A: help/용어 정합 정리 (진입 작업)
+- 목표: `wt list`/`wt cleanup`의 옵션 설명과 roadmap/backlog 용어를 동일하게 맞춘다.
+- 산출물: help 문구 또는 스펙 문구의 최소 수정, 용어 테이블(추천 신호/preview/apply/review) 일치.
+- 의존관계: 없음.
 
-4. `wt cleanup`/`wt list` 후속 polish
-- `cleanup --tui`와 list 필터는 이미 들어갔지만, 실제 사용 후 review/apply copy, filter discoverability, help text 는 더 다듬을 여지가 있다.
-- 기능 확장보다 naming/help/output polish 위주로 접근하는 편이 맞다.
+2. Package B: `wt cleanup --tui` review/apply 문구 고정
+- 목표: review help, continue row, confirm/abort/cancel 메시지의 사용자 계약을 명확히 고정한다.
+- 산출물: 텍스트 계약 문서화 + 기존 동작 회귀 테스트 정리(`review cancelled` exit 130, confirm 거부 시 `wt cleanup: aborted` 유지).
+- 의존관계: Package A 이후(용어 기준선 재사용).
+
+3. Package C: `wt list` 필터 discoverability 강화
+- 목표: `--stale`/`--safe-to-remove`/`--recommended` 조합 규칙과 verify 의존성을 사용자가 즉시 이해하게 만든다.
+- 산출물: help/spec 예시 보강, 텍스트/JSON 필터 semantics 동일성 근거 연결.
+- 의존관계: Package A 이후.
+
+4. Package D: `list --json`/`cleanup --json` verify 필드 범위 마감
+- 목표: 두 명령의 verify 필드 범위를 계약 단위로 비교해 남은 차이를 정리하고 deprecated alias 정리 시점을 확정한다.
+- 산출물: 필드 매트릭스(포함/조건/호환성), 필요한 테스트/스펙 보강, 하위호환 일정 메모.
+- 의존관계: Package B/C 이후(메시지/필터 용어가 고정된 상태에서 스키마 마감).
 
 ## Audit notes
 
-- `wt doctor`는 `main`에 구현 및 문서화되었으므로 신규 feature backlog 에서 제외한다.
+- 기존 backlog 1/2/3 성격(출력 정합, `doctor` 후속, agent/shell 후속)은 현재 `main`에 머지된 범위를 기준으로 우선순위 큐에서 내리고 shipped/follow-up 관점으로 관리한다.
 - `wt upgrade`는 이미 구현 및 문서화되어 backlog 후보가 아니라 shipped 범위로 본다.
-- 현재 기능 표면 기준으로는 새 대형 명령을 더 늘리기보다 좁아진 출력 스키마 정리와 `doctor` 후속 polish 가 우선이다.
+- 현재 우선순위는 `cleanup`/`list` polish 를 작은 작업 묶음으로 순차 마감하는 것이다.
 
 ## Candidate selection criteria
 
