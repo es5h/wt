@@ -9,20 +9,22 @@
 - Path selection: `wt path`, `--json`, `--create`, `--tui`, `--no-tui`
 - Root and execution: `wt root`, `wt run`
 - Worktree lifecycle: `wt create`, `wt remove`, `wt prune`, `wt cleanup`
+- Environment diagnostics: `wt doctor`, text/JSON checks for Git context, root config, hosting CLI, shell setup
 - Shell integration: `wt init <shell>`, `wtg`, `wcd`, `wtr`, `wt completion <shell>`, init/completion install guidance
 - TUI flows: reusable picker core, `wt path --tui`, `wt remove --tui`, `wt prune --tui`, `wt cleanup --tui`
 - Hosting integration: GitHub PR / GitLab MR merged verification
+- Install/update flow: `scripts/install.sh`, `wt upgrade`, latest release resolution
 - Agent workflow docs: reusable prompt template, skill registration guide, roadmap/backlog docs
 
 ## Next Likely Work
 
 현재 구조와 최근 머지 흐름을 기준으로 보면 다음 순서가 가장 자연스럽다.
 
-1. `wt doctor`
-hosting verify, shell completion, `wt.root`, `WT_ROOT`, `gh`/`glab` 같은 환경 의존성이 점점 늘고 있다. 설치 상태와 현재 repo 컨텍스트를 빠르게 점검하는 진단 명령이 있으면 팀 온보딩과 에이전트 환경 점검이 쉬워진다.
+1. Structured output consistency hardening
+핵심 action/applied/removed semantics 는 이미 정리됐다. 남은 범위는 `list`/`cleanup` 사이 verify field 범위 차이, `hostingChangeUrl` 같은 세부 key naming 같이 스크립트 소비자 관점의 마감 정리에 가깝다.
 
-2. Structured output consistency hardening
-`list`, `path`, `run`, `remove`, `prune`, `cleanup`에 JSON이 이미 존재한다. 스크립트 사용성을 높이려면 명령 간 action/reason/exit code 표현을 더 일관되게 다듬는 후속 작업이 자연스럽다.
+2. `wt doctor` follow-up polish
+새로 들어간 `doctor`는 진단 범위가 넓어서 실제 사용 결과를 보고 check naming, warning copy, shell/completion 판별 신호, exit semantics를 조금 더 다듬을 여지가 있다. 새 명령을 더 추가하기보다 현재 진단 결과를 신뢰하기 쉽게 만드는 쪽이 먼저다.
 
 3. Agent/shell UX follow-up hardening
 최근에 `cleanup --tui`, list 필터, shell/completion 설치 가이드, prompt template까지 한 번에 들어갔다. 이제는 새 기능을 더 붙이기보다 실제 사용 결과를 보고 도움말, 문서 밀도, helper 범위를 줄이거나 다듬는 후속 정리가 더 현실적이다.
