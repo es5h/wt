@@ -58,6 +58,8 @@
 - `--verify-hosting`은 GitHub(`gh`)와 GitLab(`glab`)만 지원한다.
 - hosting 검증 실패는 명령 전체 실패로 승격하지 않는다.
 - hosting 검증이 불가능하면 텍스트 출력에는 note, JSON에는 `mergedViaHosting: null`과 `hostingReason`을 남긴다.
+- hosting change metadata key는 lower camelCase를 기본으로 하되, `URL` 같은 널리 쓰이는 initialism은 보존한다. canonical key는 `hostingChangeNumber`, `hostingChangeTitle`, `hostingChangeURL`이다.
+- compatibility policy: `hostingChangeUrl`은 기존 스크립트 호환성을 위한 deprecated alias로 당분간 함께 유지한다. 새 소비자는 `hostingChangeURL`만 사용해야 한다.
 - GitHub 바이너리 탐색 순서는 `WT_GH_BIN` 후 `PATH`다.
 - GitLab 바이너리 탐색 순서는 `WT_GLAB_BIN` 후 `PATH`다.
 

@@ -21,7 +21,7 @@
 현재 구조와 최근 머지 흐름을 기준으로 보면 다음 순서가 가장 자연스럽다.
 
 1. Structured output consistency hardening
-핵심 action/applied/removed semantics 는 이미 정리됐다. 남은 범위는 `list`/`cleanup` 사이 verify field 범위 차이, `hostingChangeUrl` 같은 세부 key naming 같이 스크립트 소비자 관점의 마감 정리에 가깝다.
+핵심 action/applied/removed semantics 는 이미 정리됐다. 남은 범위는 `list`/`cleanup` 사이 verify field 범위 차이, deprecated alias 정리 시점 같은 스크립트 소비자 관점의 마감 정리에 가깝다.
 
 2. `wt doctor` follow-up polish
 새로 들어간 `doctor`는 진단 범위가 넓어서 실제 사용 결과를 보고 check naming, warning copy, shell/completion 판별 신호, exit semantics를 조금 더 다듬을 여지가 있다. 새 명령을 더 추가하기보다 현재 진단 결과를 신뢰하기 쉽게 만드는 쪽이 먼저다.

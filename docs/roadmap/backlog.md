@@ -6,7 +6,7 @@
 
 1. Structured JSON consistency
 - 핵심 `action`/`applied`/`removed` semantics 는 이미 정리됐다.
-- 남은 범위는 `list --json`과 `cleanup --json`의 verify field 범위 차이, `hostingChangeUrl` 같은 세부 key naming 정리처럼 스크립트 소비자를 위한 마감 작업에 가깝다.
+- 남은 범위는 `list --json`과 `cleanup --json`의 verify field 범위 차이, deprecated alias 정리 시점처럼 스크립트 소비자 관점의 마감 작업에 가깝다.
 
 2. `wt doctor` follow-up polish
 - `doctor`는 이제 `main`에 들어왔지만, 실제 사용 결과를 기준으로 check naming, warning copy, shell/completion 판별 방식, JSON/text parity 를 다듬을 여지가 있다.
