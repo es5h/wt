@@ -89,4 +89,63 @@ if [ -x "$INSTALL_DIR/wt" ]; then
     echo "Installed: wt (unknown version)"
   fi
 fi
-echo "Tip: ensure your Go bin dir is in PATH (e.g. \$(go env GOPATH)/bin or GOBIN)."
+# Verify INSTALL_DIR is in PATH; offer to fix if not.
+case ":$PATH:" in
+  *":$INSTALL_DIR:"*) ;;
+  *)
+    echo "" >&2
+    echo "WARNING: '$INSTALL_DIR' is not in your PATH." >&2
+    echo "The 'wt' command will not be found until you add it." >&2
+    echo "" >&2
+
+    # Detect current shell and its rc file.
+    CURRENT_SHELL="$(basename "${SHELL:-sh}")"
+    RC_FILE=""
+    PATH_LINE=""
+    case "$CURRENT_SHELL" in
+      zsh)
+        RC_FILE="$HOME/.zshrc"
+        PATH_LINE="export PATH=\"$INSTALL_DIR:\$PATH\""
+        ;;
+      bash)
+        RC_FILE="$HOME/.bashrc"
+        PATH_LINE="export PATH=\"$INSTALL_DIR:\$PATH\""
+        ;;
+      fish)
+        RC_FILE="$HOME/.config/fish/config.fish"
+        PATH_LINE="fish_add_path $INSTALL_DIR"
+        ;;
+      *)
+        RC_FILE="$HOME/.profile"
+        PATH_LINE="export PATH=\"$INSTALL_DIR:\$PATH\""
+        ;;
+    esac
+
+    # Ask user whether to append PATH config automatically.
+    if [ -t 0 ] && [ -n "$RC_FILE" ]; then
+      printf "Add '$INSTALL_DIR' to PATH in %s? [y/N] " "$RC_FILE" >&2
+      read -r REPLY </dev/tty
+      case "$REPLY" in
+        [yY]|[yY][eE][sS])
+          echo "" >> "$RC_FILE"
+          echo "# Added by wt installer" >> "$RC_FILE"
+          echo "$PATH_LINE" >> "$RC_FILE"
+          echo "Added to $RC_FILE" >&2
+          echo "Run 'source $RC_FILE' or open a new terminal to apply." >&2
+          ;;
+        *)
+          echo "Skipped. You can add it manually:" >&2
+          echo "  echo '$PATH_LINE' >> $RC_FILE" >&2
+          echo "" >&2
+          echo "  Or run directly: $INSTALL_DIR/wt" >&2
+          ;;
+      esac
+    else
+      # Non-interactive: just print instructions.
+      echo "  Add this line to $RC_FILE:" >&2
+      echo "    $PATH_LINE" >&2
+      echo "" >&2
+      echo "  Or run directly: $INSTALL_DIR/wt" >&2
+    fi
+    ;;
+esac
