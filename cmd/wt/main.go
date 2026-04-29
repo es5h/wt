@@ -10,9 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/es5h/wt/internal/buildinfo"
-	"github.com/es5h/wt/internal/runner"
-	"github.com/es5h/wt/internal/worktree"
+	"github.com/crevissepartners/wt/internal/buildinfo"
+	"github.com/crevissepartners/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/worktree"
 )
 
 func main() {

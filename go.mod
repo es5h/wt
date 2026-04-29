@@ -1,4 +1,4 @@
-module github.com/es5h/wt
+module github.com/crevissepartners/wt
 
 go 1.26
 

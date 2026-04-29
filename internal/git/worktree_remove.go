@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/es5h/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/runner"
 )
 
 func WorktreeRemove(ctx context.Context, r runner.Runner, repoRoot string, path string, force bool) error {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/es5h/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/runner"
 )
 
 func TestRun_ForwardsStdoutStderr(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/es5h/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/runner"
 )
 
 func installWithGo(ctx context.Context, workDir string, installDir string, packageRef string) (runner.Result, error) {

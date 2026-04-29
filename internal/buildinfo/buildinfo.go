@@ -4,7 +4,7 @@ import "runtime/debug"
 
 const (
 	// ModulePath is the canonical Go module path used for release installs.
-	ModulePath = "github.com/es5h/wt"
+	ModulePath = "github.com/crevissepartners/wt"
 )
 
 // Version can be overridden at build time via -ldflags.

@@ -16,7 +16,7 @@
 권장 설치(릴리즈 태그 기준):
 
 ```sh
-go install github.com/es5h/wt/cmd/wt@latest
+go install github.com/crevissepartners/wt/cmd/wt@latest
 ```
 
 로컬 소스에서 설치:

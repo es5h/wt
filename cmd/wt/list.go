@@ -10,9 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/es5h/wt/internal/git"
-	"github.com/es5h/wt/internal/hosting"
-	"github.com/es5h/wt/internal/worktree"
+	"github.com/crevissepartners/wt/internal/git"
+	"github.com/crevissepartners/wt/internal/hosting"
+	"github.com/crevissepartners/wt/internal/worktree"
 )
 
 func newListCmd() *cobra.Command {

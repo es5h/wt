@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/es5h/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/runner"
 )
 
 func TestUpgrade_DryRun(t *testing.T) {
@@ -30,8 +30,8 @@ func TestUpgrade_DryRun(t *testing.T) {
 			if workDir != "/repo" {
 				t.Fatalf("workDir = %q, want /repo", workDir)
 			}
-			if modulePath != "github.com/es5h/wt" {
-				t.Fatalf("modulePath = %q, want github.com/es5h/wt", modulePath)
+			if modulePath != "github.com/crevissepartners/wt" {
+				t.Fatalf("modulePath = %q, want github.com/crevissepartners/wt", modulePath)
 			}
 			return "v0.10.2", nil
 		},
@@ -50,7 +50,7 @@ func TestUpgrade_DryRun(t *testing.T) {
 	if stdout.Len() != 0 {
 		t.Fatalf("stdout = %q, want empty", stdout.String())
 	}
-	if !strings.Contains(stderr.String(), "go install github.com/es5h/wt/cmd/wt@v0.10.2") {
+	if !strings.Contains(stderr.String(), "go install github.com/crevissepartners/wt/cmd/wt@v0.10.2") {
 		t.Fatalf("stderr = %q, want resolved version install command", stderr.String())
 	}
 }
@@ -125,13 +125,13 @@ func TestUpgrade_UsesCurrentBinaryDir(t *testing.T) {
 	if gotWorkDir != "/repo" {
 		t.Fatalf("workDir = %q, want /repo", gotWorkDir)
 	}
-	if gotPackageRef != "github.com/es5h/wt/cmd/wt@v0.10.2" {
-		t.Fatalf("packageRef = %q, want github.com/es5h/wt/cmd/wt@v0.10.2", gotPackageRef)
+	if gotPackageRef != "github.com/crevissepartners/wt/cmd/wt@v0.10.2" {
+		t.Fatalf("packageRef = %q, want github.com/crevissepartners/wt/cmd/wt@v0.10.2", gotPackageRef)
 	}
 	if gotInstallDir == "" || filepath.IsAbs(gotInstallDir) == false {
 		t.Fatalf("installDir = %q, want absolute path", gotInstallDir)
 	}
-	if !strings.Contains(stdout.String(), "upgraded: github.com/es5h/wt/cmd/wt@v0.10.2") {
+	if !strings.Contains(stdout.String(), "upgraded: github.com/crevissepartners/wt/cmd/wt@v0.10.2") {
 		t.Fatalf("stdout = %q, want upgraded message", stdout.String())
 	}
 }

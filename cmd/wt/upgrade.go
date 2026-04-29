@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/es5h/wt/internal/buildinfo"
+	"github.com/crevissepartners/wt/internal/buildinfo"
 )
 
 type upgradeOpts struct {

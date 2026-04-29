@@ -10,9 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/es5h/wt/internal/runner"
-	"github.com/es5h/wt/internal/tui/picker"
-	"github.com/es5h/wt/internal/worktree"
+	"github.com/crevissepartners/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/tui/picker"
+	"github.com/crevissepartners/wt/internal/worktree"
 )
 
 func TestPath_PrintsOnlyPath(t *testing.T) {

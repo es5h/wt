@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/es5h/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/runner"
 )
 
 func newDoctorCmdWithDeps(t *testing.T, d *deps) (*cobra.Command, *bytes.Buffer, *bytes.Buffer) {
@@ -65,7 +65,7 @@ func TestDoctor_JSON_InRepoWithOverrides(t *testing.T) {
 					workDir: repo,
 					name:    "git",
 					args:    []string{"remote", "get-url", "origin"},
-					res:     runner.Result{Stdout: []byte("https://github.com/es5h/wt.git\n"), ExitCode: 0},
+					res:     runner.Result{Stdout: []byte("https://github.com/crevissepartners/wt.git\n"), ExitCode: 0},
 				},
 				{
 					workDir: cwd,
@@ -280,7 +280,7 @@ func TestDoctor_Text_HostingAuthWarnWhenRequired(t *testing.T) {
 					workDir: repo,
 					name:    "git",
 					args:    []string{"remote", "get-url", "origin"},
-					res:     runner.Result{Stdout: []byte("https://github.com/es5h/wt.git\n"), ExitCode: 0},
+					res:     runner.Result{Stdout: []byte("https://github.com/crevissepartners/wt.git\n"), ExitCode: 0},
 				},
 				{
 					workDir: cwd,

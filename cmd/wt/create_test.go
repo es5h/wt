@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/es5h/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/runner"
 )
 
 func TestCreate_UsesRemoteIfExists(t *testing.T) {
