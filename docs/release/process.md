@@ -7,7 +7,7 @@
 - `VERSION`은 `X.Y.Z` 형식(접두사 `v` 없음)을 사용한다.
 - Git tag는 반드시 `v$(cat VERSION)` 형식을 사용한다.
 - 사용자-facing 변경은 merge 전에 `docs/release/notes.md`의 `## Unreleased`에 기록한다.
-- 릴리즈 설치 경로는 `go install github.com/es5h/wt/cmd/wt@latest`를 기준으로 유지한다.
+- 릴리즈 설치 경로는 `go install github.com/crevissepartners/wt/cmd/wt@latest`를 기준으로 유지한다.
 - `VERSION`을 변경한 PR은 같은 PR에서 `docs/release/notes.md`도 반드시 함께 갱신한다.
 - `VERSION`은 base 대비 증가해야 하며, 이미 존재하는 태그와 충돌하면 안 된다.
 
@@ -31,8 +31,8 @@ git push origin "v${VERSION}"
 
 ## Verification
 
-- `go list -m github.com/es5h/wt@latest`가 방금 배포한 태그를 가리키는지 확인한다.
-- `go install github.com/es5h/wt/cmd/wt@latest` 후 `wt --version` 출력이 태그 버전과 일치하는지 확인한다.
+- `go list -m github.com/crevissepartners/wt@latest`가 방금 배포한 태그를 가리키는지 확인한다.
+- `go install github.com/crevissepartners/wt/cmd/wt@latest` 후 `wt --version` 출력이 태그 버전과 일치하는지 확인한다.
 - GitHub Actions `ci`는 PR/main push에서 `VERSION`/`docs/release/notes.md` 정책과 semver 증가를 검증한다.
 - GitHub Actions `ci`는 tag push 시 `v<semver>` 형식과 `VERSION` 파일 일치 여부를 자동 검증한다.
 - GitHub Actions `auto-tag`는 main push마다 현재 `VERSION` 태그 존재 여부를 확인하고, 태그가 없을 때 생성한다.

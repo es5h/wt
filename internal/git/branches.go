@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/es5h/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/runner"
 )
 
 func RemoteBranches(ctx context.Context, r runner.Runner, repoRoot string, remote string) ([]string, error) {

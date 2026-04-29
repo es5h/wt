@@ -12,7 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/es5h/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/runner"
 )
 
 func decodeJSONObjects(t *testing.T, data []byte) []map[string]any {
@@ -496,7 +496,7 @@ branch refs/heads/feature-x
 					workDir: repo,
 					name:    "git",
 					args:    []string{"remote", "get-url", "origin"},
-					res:     runner.Result{Stdout: []byte("git@github.com:es5h/wt.git\n"), ExitCode: 0},
+					res:     runner.Result{Stdout: []byte("git@github.com:crevissepartners/wt.git\n"), ExitCode: 0},
 				},
 				{
 					workDir: repo,
@@ -515,7 +515,7 @@ branch refs/heads/feature-x
 					workDir: repo,
 					name:    ghBin,
 					args:    []string{"pr", "list", "--state", "merged", "--head", "feature-x", "--json", "number,title,url", "--limit", "1", "--base", "main"},
-					res:     runner.Result{Stdout: []byte(`[{"number":1,"title":"merged feature","url":"https://github.com/es5h/wt/pull/1"}]`), ExitCode: 0},
+					res:     runner.Result{Stdout: []byte(`[{"number":1,"title":"merged feature","url":"https://github.com/crevissepartners/wt/pull/1"}]`), ExitCode: 0},
 				},
 				{
 					workDir: repo,
@@ -534,7 +534,7 @@ branch refs/heads/feature-x
 					workDir: repo,
 					name:    ghBin,
 					args:    []string{"pr", "list", "--state", "merged", "--head", "feature-x", "--json", "number,title,url", "--limit", "1", "--base", "main"},
-					res:     runner.Result{Stdout: []byte(`[{"number":1,"title":"merged feature","url":"https://github.com/es5h/wt/pull/1"}]`), ExitCode: 0},
+					res:     runner.Result{Stdout: []byte(`[{"number":1,"title":"merged feature","url":"https://github.com/crevissepartners/wt/pull/1"}]`), ExitCode: 0},
 				},
 			},
 		},
@@ -602,7 +602,7 @@ branch refs/heads/feature-x
 					workDir: repo,
 					name:    "git",
 					args:    []string{"remote", "get-url", "origin"},
-					res:     runner.Result{Stdout: []byte("git@github.com:es5h/wt.git\n"), ExitCode: 0},
+					res:     runner.Result{Stdout: []byte("git@github.com:crevissepartners/wt.git\n"), ExitCode: 0},
 				},
 				{
 					workDir: repo,
@@ -614,7 +614,7 @@ branch refs/heads/feature-x
 					workDir: repo,
 					name:    ghBin,
 					args:    []string{"pr", "list", "--state", "merged", "--head", "feature-x", "--json", "number,title,url", "--limit", "1", "--base", "main"},
-					res:     runner.Result{Stdout: []byte(`[{"number":42,"title":"feature x","url":"https://github.com/es5h/wt/pull/42"}]`), ExitCode: 0},
+					res:     runner.Result{Stdout: []byte(`[{"number":42,"title":"feature x","url":"https://github.com/crevissepartners/wt/pull/42"}]`), ExitCode: 0},
 				},
 			},
 		},
@@ -645,7 +645,7 @@ branch refs/heads/feature-x
 	if got[0]["hostingChangeTitle"] != "feature x" {
 		t.Fatalf("hostingChangeTitle = %#v, want feature x", got[0]["hostingChangeTitle"])
 	}
-	if got[0]["hostingChangeURL"] != "https://github.com/es5h/wt/pull/42" {
+	if got[0]["hostingChangeURL"] != "https://github.com/crevissepartners/wt/pull/42" {
 		t.Fatalf("hostingChangeURL = %#v, want PR URL", got[0]["hostingChangeURL"])
 	}
 	if got[0]["hostingChangeUrl"] != got[0]["hostingChangeURL"] {
@@ -705,7 +705,7 @@ branch refs/heads/feature-x
 					workDir: repo,
 					name:    "git",
 					args:    []string{"remote", "get-url", "origin"},
-					res:     runner.Result{Stdout: []byte("git@github.com:es5h/wt.git\n"), ExitCode: 0},
+					res:     runner.Result{Stdout: []byte("git@github.com:crevissepartners/wt.git\n"), ExitCode: 0},
 				},
 				{
 					workDir: repo,
@@ -798,7 +798,7 @@ branch refs/heads/feature-x
 					workDir: repo,
 					name:    "git",
 					args:    []string{"remote", "get-url", "origin"},
-					res:     runner.Result{Stdout: []byte("git@github.com:es5h/wt.git\n"), ExitCode: 0},
+					res:     runner.Result{Stdout: []byte("git@github.com:crevissepartners/wt.git\n"), ExitCode: 0},
 				},
 			},
 		},

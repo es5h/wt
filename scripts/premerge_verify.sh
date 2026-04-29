@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 version_file="./VERSION"
 release_notes="./docs/release/notes.md"
 gomod_file="./go.mod"
-expected_module="github.com/es5h/wt"
+expected_module="github.com/crevissepartners/wt"
 
 if [ ! -f "$version_file" ]; then
   echo "premerge: missing VERSION file" >&2

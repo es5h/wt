@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/es5h/wt/internal/runner"
-	"github.com/es5h/wt/internal/tui/picker"
+	"github.com/crevissepartners/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/tui/picker"
 )
 
 func TestPrune_Preview(t *testing.T) {

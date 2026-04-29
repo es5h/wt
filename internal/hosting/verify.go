@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/es5h/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/runner"
 )
 
 type Provider string

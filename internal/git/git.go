@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/es5h/wt/internal/runner"
-	"github.com/es5h/wt/internal/worktree"
+	"github.com/crevissepartners/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/worktree"
 )
 
 func RepoRoot(ctx context.Context, r runner.Runner, cwd string) (string, error) {

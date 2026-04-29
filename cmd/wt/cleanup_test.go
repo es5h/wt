@@ -12,9 +12,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/es5h/wt/internal/runner"
-	"github.com/es5h/wt/internal/tui/picker"
-	"github.com/es5h/wt/internal/worktree"
+	"github.com/crevissepartners/wt/internal/runner"
+	"github.com/crevissepartners/wt/internal/tui/picker"
+	"github.com/crevissepartners/wt/internal/worktree"
 )
 
 func TestCleanup_PreviewMixed(t *testing.T) {
@@ -347,7 +347,7 @@ branch refs/heads/feature-remove
 					workDir: repo,
 					name:    "git",
 					args:    []string{"remote", "get-url", "origin"},
-					res:     runner.Result{Stdout: []byte("git@github.com:es5h/wt.git\n"), ExitCode: 0},
+					res:     runner.Result{Stdout: []byte("git@github.com:crevissepartners/wt.git\n"), ExitCode: 0},
 				},
 				{
 					workDir: repo,
@@ -390,7 +390,7 @@ branch refs/heads/feature-remove
 					workDir: repo,
 					name:    ghBin,
 					args:    []string{"pr", "list", "--state", "merged", "--head", "feature-remove", "--json", "number,title,url", "--limit", "1", "--base", "main"},
-					res:     runner.Result{Stdout: []byte(`[{"number":42,"title":"feature remove","url":"https://github.com/es5h/wt/pull/42"}]`), ExitCode: 0},
+					res:     runner.Result{Stdout: []byte(`[{"number":42,"title":"feature remove","url":"https://github.com/crevissepartners/wt/pull/42"}]`), ExitCode: 0},
 				},
 			},
 		},
@@ -425,7 +425,7 @@ branch refs/heads/feature-remove
 	if gotObjects[1]["hostingChangeTitle"] != "feature remove" {
 		t.Fatalf("hostingChangeTitle = %#v, want feature remove", gotObjects[1]["hostingChangeTitle"])
 	}
-	if gotObjects[1]["hostingChangeUrl"] != "https://github.com/es5h/wt/pull/42" {
+	if gotObjects[1]["hostingChangeUrl"] != "https://github.com/crevissepartners/wt/pull/42" {
 		t.Fatalf("hostingChangeUrl = %#v, want PR URL", gotObjects[1]["hostingChangeUrl"])
 	}
 
@@ -508,7 +508,7 @@ branch refs/heads/feature-x
 					workDir: repo,
 					name:    "git",
 					args:    []string{"remote", "get-url", "origin"},
-					res:     runner.Result{Stdout: []byte("git@github.com:es5h/wt.git\n"), ExitCode: 0},
+					res:     runner.Result{Stdout: []byte("git@github.com:crevissepartners/wt.git\n"), ExitCode: 0},
 				},
 				{
 					workDir: repo,

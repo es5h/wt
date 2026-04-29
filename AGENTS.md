@@ -71,7 +71,7 @@
 - 버전은 `VERSION`에서 관리한다(semver: `MAJOR.MINOR.PATCH`).
 - 사용자에게 보이는 변경이 있으면 `docs/release/notes.md`의 `Unreleased`에 먼저 기록한다.
 - 릴리즈 Git tag는 반드시 `v$(cat VERSION)` 형식을 사용한다.
-- 릴리즈 설치 기준 경로는 `go install github.com/es5h/wt/cmd/wt@latest`로 유지한다.
+- 릴리즈 설치 기준 경로는 `go install github.com/crevissepartners/wt/cmd/wt@latest`로 유지한다.
 
 ## Merge gate (to main)
 - main에 머지(또는 PR ready) 전에 `make premerge`를 통과시킨다.

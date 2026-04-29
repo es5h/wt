@@ -309,7 +309,7 @@ TUI 규칙:
 
 - 기본 동작은 현재 실행 중인 `wt` 바이너리 디렉터리를 `GOBIN`으로 사용한다.
 - 현재 실행 중인 바이너리가 `PATH`의 설치된 `wt`와 다르면(예: `./wt`) usage error로 실패하고 `wt upgrade`로 다시 실행하라고 안내한다.
-- `--version latest`(기본값)일 때는 `go list -m -versions github.com/es5h/wt`에서 최신 릴리즈 태그(`vX.Y.Z`)를 해석한 뒤 해당 버전을 설치한다.
+- `--version latest`(기본값)일 때는 `go list -m -versions github.com/crevissepartners/wt`에서 최신 릴리즈 태그(`vX.Y.Z`)를 해석한 뒤 해당 버전을 설치한다.
 - `--version <vX.Y.Z|latest>`로 설치 버전을 고를 수 있다.
 - `--version` 값에는 `@`를 포함할 수 없다.
 - 설치 명령은 `go install`을 사용한다.

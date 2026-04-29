@@ -93,7 +93,7 @@ wt-worktree 스킬을 사용해서 <task>
 설치 기준:
 
 ```sh
-go install github.com/es5h/wt/cmd/wt@latest
+go install github.com/crevissepartners/wt/cmd/wt@latest
 ```
 
 이미 설치돼 있으면:
